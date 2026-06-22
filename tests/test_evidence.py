@@ -34,3 +34,69 @@ def test_build_evidence_packet_uses_text_and_table_sources():
     assert len(packet.items) == 2
     assert packet.items[0].quality_status == QualityStatus.safe_to_use
     assert packet.items[1].table_id == "T-001"
+
+
+def test_build_evidence_packet_excludes_low_quality_tables():
+    packet = build_evidence_packet(
+        doc_id="doc_test",
+        source_file="测试股份有限公司招股说明书.pdf",
+        blocks=[],
+        tables=[
+            TableObject(
+                table_id="T-002",
+                title="低质量表格",
+                source_file="测试股份有限公司招股说明书.pdf",
+                page_number=4,
+                section_path=["业务和技术"],
+                columns=["产品", "收入"],
+                rows=[["智能控制器", "12000万元"]],
+                quality_score=0.7,
+            )
+        ],
+    )
+
+    assert packet.items == []
+
+
+def test_build_evidence_packet_excludes_tables_without_fields():
+    packet = build_evidence_packet(
+        doc_id="doc_test",
+        source_file="测试股份有限公司招股说明书.pdf",
+        blocks=[],
+        tables=[
+            TableObject(
+                table_id="T-003",
+                title="空字段表格",
+                source_file="测试股份有限公司招股说明书.pdf",
+                page_number=5,
+                section_path=["业务和技术"],
+                columns=[],
+                rows=[[]],
+                quality_score=0.9,
+            )
+        ],
+    )
+
+    assert packet.items == []
+
+
+def test_build_evidence_packet_uses_section_fallback_for_table_sources():
+    packet = build_evidence_packet(
+        doc_id="doc_test",
+        source_file="测试股份有限公司招股说明书.pdf",
+        blocks=[],
+        tables=[
+            TableObject(
+                table_id="T-004",
+                title="产品收入结构表",
+                source_file="测试股份有限公司招股说明书.pdf",
+                page_number=6,
+                section_path=[],
+                columns=["产品", "2023年收入"],
+                rows=[["智能控制器", "12000万元"]],
+                quality_score=0.9,
+            )
+        ],
+    )
+
+    assert packet.items[0].section_path == ["未识别章节"]

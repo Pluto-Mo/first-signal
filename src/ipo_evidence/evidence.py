@@ -34,6 +34,8 @@ def build_evidence_packet(
                 table.columns[index]: table.rows[0][index]
                 for index in range(min(len(table.columns), len(table.rows[0])))
             }
+            if not fields:
+                continue
             items.append(
                 EvidenceItem(
                     evidence_id=f"E-{next_id:03d}",
@@ -44,7 +46,7 @@ def build_evidence_packet(
                     page_number=table.page_number,
                     table_id=table.table_id,
                     table_title=table.title,
-                    section_path=table.section_path,
+                    section_path=table.section_path or ["未识别章节"],
                     fields=fields,
                     quality_status=QualityStatus.safe_to_use,
                 )

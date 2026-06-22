@@ -99,8 +99,9 @@ data/docs/{doc_id}/
 
 - 报告里的核心判断必须带 citation 编号。
 - citation 允许 `source_url: null`，但必须包含本地定位字段。
-- 最小定位字段为 `source_file`、`page_number`、`block_id`、`section_path`。
-- 表格引用还必须包含 `table_id`、`table_title` 和字段值。
+- 文本引用必须包含 `source_file`、`page_number`、`block_id`、`section_path` 和 `quote`。
+- 表格引用使用 `table_id` 作为结构化对象定位，不要求 `block_id`。
+- 表格引用必须包含 `source_file`、`page_number`、`table_id`、`table_title`、非空字段值和 `section_path`。
 - 没有来源定位的事实不得进入最终报告。
 
 ## 质量状态
