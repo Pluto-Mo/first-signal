@@ -14,6 +14,18 @@ def score_table(raw_table: dict) -> float:
     return 0.4
 
 
+def normalize_page_number(raw_value: object) -> int:
+    if raw_value is None or raw_value == "":
+        return 1
+    try:
+        page_number = int(raw_value)
+    except (TypeError, ValueError):
+        return 1
+    if page_number < 1:
+        return 1
+    return page_number
+
+
 def extract_tables(
     raw_tables: list[dict],
     source_file: str,
@@ -26,7 +38,7 @@ def extract_tables(
                 table_id=f"T-{index:03d}",
                 title=raw_table.get("title") or f"未命名表格 {index}",
                 source_file=source_file,
-                page_number=int(raw_table.get("page_number") or 1),
+                page_number=normalize_page_number(raw_table.get("page_number")),
                 section_path=section_path,
                 columns=list(raw_table.get("columns") or []),
                 rows=list(raw_table.get("rows") or []),
