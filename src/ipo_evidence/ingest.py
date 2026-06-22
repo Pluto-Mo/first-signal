@@ -4,7 +4,7 @@ import hashlib
 import re
 from pathlib import Path
 
-from ipo_evidence.io import write_json
+from ipo_evidence.io import read_json, write_json
 from ipo_evidence.models import Manifest
 
 
@@ -25,7 +25,10 @@ def scan_inbox(inbox: Path, docs: Path) -> list[Manifest]:
     manifests: list[Manifest] = []
     docs.mkdir(parents=True, exist_ok=True)
 
-    for pdf_path in sorted(inbox.glob("*.pdf")):
+    pdf_paths = sorted(
+        path for path in inbox.iterdir() if path.is_file() and path.suffix.lower() == ".pdf"
+    )
+    for pdf_path in pdf_paths:
         manifest = Manifest(
             doc_id=doc_id_for_file(pdf_path),
             company_name=company_name_from_filename(pdf_path),
@@ -34,8 +37,11 @@ def scan_inbox(inbox: Path, docs: Path) -> list[Manifest]:
         package_dir = docs / manifest.doc_id
         package_dir.mkdir(parents=True, exist_ok=True)
         manifest_path = package_dir / "manifest.json"
-        if not manifest_path.exists():
-            write_json(manifest_path, manifest)
+        if manifest_path.exists():
+            manifests.append(Manifest.model_validate(read_json(manifest_path)))
+            continue
+
+        write_json(manifest_path, manifest)
         manifests.append(manifest)
 
     return manifests
