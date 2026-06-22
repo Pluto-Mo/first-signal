@@ -19,10 +19,11 @@ dev = [
 [project.scripts]
 ipo-evidence = "ipo_evidence.cli:main"
 
-[tool.setuptools]
-packages = []
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 pythonpath = ["src"]
 
 [tool.ruff]

@@ -9,4 +9,5 @@ citation_quality:
   required_fields:
     - source_file
     - page_number
+    - block_id
     - section_path

@@ -8,6 +8,8 @@ The MVP reads local PDFs from `data/inbox/`, creates long-term document packages
 
 ## Local pipeline
 
+These MVP commands are available now as CLI stubs. They will become fully functional as the parser, pipeline, and report generation implementation tasks land.
+
 ```powershell
 python -m pip install -e ".[dev]"
 python -m ipo_evidence.cli scan-inbox
