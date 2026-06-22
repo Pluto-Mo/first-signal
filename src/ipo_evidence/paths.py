@@ -20,4 +20,12 @@ def docs_dir() -> Path:
 
 
 def doc_dir(doc_id: str) -> Path:
-    return docs_dir() / doc_id
+    doc_id_path = Path(doc_id)
+    if not doc_id or doc_id_path.is_absolute() or doc_id_path.name != doc_id or ".." in doc_id:
+        raise ValueError(f"Invalid doc_id: {doc_id}")
+
+    docs_path = docs_dir().resolve()
+    target_path = (docs_path / doc_id).resolve()
+    if not target_path.is_relative_to(docs_path):
+        raise ValueError(f"Invalid doc_id: {doc_id}")
+    return target_path

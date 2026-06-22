@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class QualityStatus(StrEnum):
@@ -35,7 +35,7 @@ class Block(BaseModel):
 
 class AstNode(BaseModel):
     title: str
-    level: int
+    level: int = Field(ge=1)
     section_path: list[str]
     block_ids: list[str] = Field(default_factory=list)
     children: list["AstNode"] = Field(default_factory=list)
@@ -50,7 +50,7 @@ class TableObject(BaseModel):
     columns: list[str]
     rows: list[list[str]]
     notes: list[str] = Field(default_factory=list)
-    quality_score: float = 0.0
+    quality_score: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
 class EvidenceItem(BaseModel):
@@ -78,7 +78,7 @@ class Citation(BaseModel):
     type: Literal["text_quote", "table_fact"]
     source_file: str
     source_url: str | None = None
-    page_number: int
+    page_number: int = Field(ge=1)
     block_id: str | None = None
     table_id: str | None = None
     section_path: list[str]
@@ -86,6 +86,29 @@ class Citation(BaseModel):
     table_title: str | None = None
     fields: dict[str, str] = Field(default_factory=dict)
     summary: str
+
+    @field_validator("section_path")
+    @classmethod
+    def section_path_must_not_be_empty(cls, value: list[str]) -> list[str]:
+        if not value:
+            raise ValueError("section_path must not be empty")
+        return value
+
+    @model_validator(mode="after")
+    def validate_locator_for_type(self) -> "Citation":
+        if self.type == "text_quote":
+            if not self.block_id:
+                raise ValueError("text_quote citation requires block_id")
+            if not self.quote:
+                raise ValueError("text_quote citation requires quote")
+        if self.type == "table_fact":
+            if not self.table_id:
+                raise ValueError("table_fact citation requires table_id")
+            if not self.table_title:
+                raise ValueError("table_fact citation requires table_title")
+            if not self.fields:
+                raise ValueError("table_fact citation requires fields")
+        return self
 
 
 class WebIndex(BaseModel):

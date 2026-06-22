@@ -21,7 +21,7 @@ def write_json(path: Path, value: BaseModel | dict | list) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def read_json(path: Path) -> dict:
+def read_json(path: Path) -> dict | list:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
