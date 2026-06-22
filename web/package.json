@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "scripts": {
+    "dev": "node -e \"console.log('Web reader is planned for Task 8.')\"",
+    "build": "node -e \"console.log('Web reader build is planned for Task 8.')\"",
+    "test": "node -e \"console.log('Web reader tests are planned for Task 8.')\""
+  }
+}

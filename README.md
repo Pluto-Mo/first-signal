@@ -19,6 +19,8 @@ python -m ipo_evidence.cli generate-report --doc-id <doc_id>
 
 ## Web reader
 
+These commands are placeholders until Task 8 adds the real Vite React Web reader.
+
 ```powershell
 npm install --prefix web
 npm run web:dev
