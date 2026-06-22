@@ -62,6 +62,7 @@ class EvidenceItem(BaseModel):
     page_number: int
     block_id: str | None = None
     table_id: str | None = None
+    table_title: str | None = None
     section_path: list[str]
     quote: str | None = None
     fields: dict[str, str] = Field(default_factory=dict)
