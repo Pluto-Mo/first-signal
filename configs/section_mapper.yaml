@@ -1,0 +1,35 @@
+canonical_sections:
+  about_company:
+    title: 关于公司
+    source_patterns:
+      - 发行人基本情况
+      - 发行人概况
+  business_and_product:
+    title: 业务与产品
+    source_patterns:
+      - 业务和技术
+      - 主营业务
+  customers_and_suppliers:
+    title: 客户与供应商
+    source_patterns:
+      - 主要客户
+      - 主要供应商
+  r_and_d_and_talent:
+    title: 研发与人才
+    source_patterns:
+      - 研发
+      - 核心技术人员
+  financials:
+    title: 财务与经营数据
+    source_patterns:
+      - 财务会计信息
+      - 管理层讨论与分析
+  use_of_proceeds:
+    title: 募集资金用途
+    source_patterns:
+      - 募集资金运用
+      - 募集资金用途
+  risks:
+    title: 风险因素
+    source_patterns:
+      - 风险因素

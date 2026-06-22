@@ -1,0 +1,8 @@
+provider: api_stub
+input_type: local_pdf
+preserve_source_pdf: true
+outputs:
+  markdown: document.md
+  blocks: blocks.jsonl
+  raw_tables: raw_tables.json
+  parse_report: parse_report.json

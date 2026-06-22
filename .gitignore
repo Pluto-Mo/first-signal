@@ -1,6 +1,7 @@
 # Python
 __pycache__/
 *.py[cod]
+*.egg-info/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
@@ -19,11 +20,16 @@ build/
 !.env.example
 
 # Local data and generated artifacts
-data/inbox/
-data/tmp/
-data/docs/
-runs/logs/
-runs/evals/
+data/inbox/*
+!data/inbox/.gitkeep
+data/tmp/*
+!data/tmp/.gitkeep
+data/docs/*
+!data/docs/.gitkeep
+runs/logs/*
+!runs/logs/.gitkeep
+runs/evals/*
+!runs/evals/.gitkeep
 
 # Superpowers visual brainstorming scratch files
 .superpowers/
