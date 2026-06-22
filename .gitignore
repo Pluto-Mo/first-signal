@@ -28,6 +28,9 @@ runs/evals/
 # Superpowers visual brainstorming scratch files
 .superpowers/
 
+# Isolated implementation worktrees
+.worktrees/
+
 # OS / editor
 .DS_Store
 Thumbs.db
