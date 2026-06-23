@@ -5,8 +5,19 @@ import pytest
 
 from ipo_evidence.cli import main
 from ipo_evidence.io import read_json
+from ipo_evidence.models import Block
+from ipo_evidence.parser.base import ParserOutput
 from ipo_evidence import pipeline as pipeline_module
 from ipo_evidence.pipeline import regenerate_report, run_one
+
+
+@pytest.fixture(autouse=True)
+def stub_parser_config(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        pipeline_module,
+        "load_yaml",
+        lambda _relative_path: {"provider": "api_stub"},
+    )
 
 
 def test_run_one_creates_document_package(tmp_path: Path):
@@ -30,9 +41,57 @@ def test_run_one_creates_document_package(tmp_path: Path):
     assert (package / "canonical_ast.json").exists()
     assert (package / "tables" / "T-001.json").exists()
     assert (package / "evidence_packet.json").exists()
+    assert (package / "report_inputs.json").exists()
     assert (package / "report.md").exists()
     assert (package / "citation.json").exists()
     assert (package / "web_index.json").exists()
+
+
+def test_run_one_uses_parser_selected_from_config(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    docs = tmp_path / "docs"
+    pdf = tmp_path / "002194_20260525_8AU9.pdf"
+    pdf.write_bytes(b"%PDF-1.4\nsample")
+    captured: dict[str, object] = {}
+
+    class FakeParser:
+        def parse(self, _pdf_path: Path) -> ParserOutput:
+            return ParserOutput(
+                markdown="# 测试股份有限公司招股说明书\n\n## 第一节 发行人基本情况",
+                blocks=[
+                    Block(
+                        block_id="B-000001",
+                        page_number=1,
+                        text="## 第一节 发行人基本情况",
+                        section_path=[],
+                    )
+                ],
+                raw_tables=[],
+                parse_report={"quality_status": "safe_to_use"},
+            )
+
+    def fake_load_yaml(_relative_path: str) -> dict:
+        return {"provider": "paddleocr_vl"}
+
+    def fake_create_parser(config: dict, fixture_path: Path | None = None) -> FakeParser:
+        captured["provider"] = config["provider"]
+        captured["fixture_path"] = fixture_path
+        return FakeParser()
+
+    monkeypatch.setattr(pipeline_module, "load_yaml", fake_load_yaml)
+    monkeypatch.setattr(pipeline_module, "create_parser", fake_create_parser)
+
+    doc_id = run_one(
+        pdf_path=pdf,
+        docs_dir=docs,
+        fixture_path=Path("tests/fixtures/sample_prospectus.txt"),
+    )
+
+    assert doc_id.startswith("doc_")
+    assert captured["provider"] == "paddleocr_vl"
+    assert (docs / doc_id / "document.md").exists()
 
 
 def test_regenerate_report_rewrites_report_and_citations(tmp_path: Path):
