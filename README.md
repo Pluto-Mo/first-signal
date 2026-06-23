@@ -8,7 +8,7 @@ The MVP reads local PDFs from `data/inbox/`, creates long-term document packages
 
 ## Local pipeline
 
-These MVP commands are available now as CLI stubs. They will become fully functional as the parser, pipeline, and report generation implementation tasks land.
+The local MVP pipeline scans PDFs from `data/inbox/`, builds document packages under `data/docs/`, and can regenerate report artifacts from an existing package.
 
 ```powershell
 python -m pip install -e ".[dev]"
@@ -19,12 +19,21 @@ python -m ipo_evidence.cli generate-report --doc-id <doc_id>
 
 ## Web reader
 
-These commands are placeholders until Task 8 adds the real Vite React Web reader.
+The Web reader is a local Vite React app focused on continuous report reading with citation details on the right side.
 
 ```powershell
 npm install --prefix web
 npm run web:dev
 npm run web:build
+```
+
+## Verified MVP commands
+
+```powershell
+python -m pytest -q
+npm --prefix web run test
+npm --prefix web run build
+python -m ipo_evidence.cli run --limit 1
 ```
 
 ## Data policy
