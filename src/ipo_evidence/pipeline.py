@@ -37,7 +37,7 @@ def run_one(pdf_path: Path, docs_dir: Path, fixture_path: Path) -> str:
         company_name=company_name,
         source_file=source_file,
         parse_status="parsed",
-        report_status="reported",
+        report_status="not_started",
         quality_status=QualityStatus.safe_to_use,
     )
 
@@ -61,6 +61,9 @@ def run_one(pdf_path: Path, docs_dir: Path, fixture_path: Path) -> str:
     write_json(package_dir / "evidence_packet.json", packet)
     write_json(package_dir / "parse_report.json", parsed.parse_report)
     _write_report_artifacts(package_dir, manifest, packet)
+    manifest.report_status = "reported"
+    write_json(package_dir / "manifest.json", manifest)
+    write_json(package_dir / "web_index.json", build_web_index(manifest))
     return doc_id
 
 

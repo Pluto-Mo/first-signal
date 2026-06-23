@@ -5,6 +5,7 @@ import pytest
 
 from ipo_evidence.cli import main
 from ipo_evidence.io import read_json
+from ipo_evidence import pipeline as pipeline_module
 from ipo_evidence.pipeline import regenerate_report, run_one
 
 
@@ -125,6 +126,38 @@ def test_regenerate_report_rejects_manifest_doc_id_mismatch(tmp_path: Path):
         regenerate_report("demo-doc", docs)
 
 
+def test_main_generate_report_raises_for_missing_manifest(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    docs = tmp_path / "docs"
+    package = docs / "demo-doc"
+    package.mkdir(parents=True)
+    (package / "evidence_packet.json").write_text('{"doc_id":"demo-doc","items":[]}\n', encoding="utf-8")
+    monkeypatch.setattr("ipo_evidence.cli.docs_dir", lambda: docs)
+
+    with pytest.raises(FileNotFoundError, match="missing required artifact"):
+        main(["generate-report", "--doc-id", "demo-doc"])
+
+
+def test_main_generate_report_raises_for_manifest_doc_id_mismatch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    docs = tmp_path / "docs"
+    package = docs / "demo-doc"
+    package.mkdir(parents=True)
+    (package / "manifest.json").write_text(
+        (
+            '{"doc_id":"other-doc","company_name":"测试股份有限公司","source_file":"sample.pdf",'
+            '"parse_status":"parsed","report_status":"not_started","quality_status":"safe_to_use"}\n'
+        ),
+        encoding="utf-8",
+    )
+    (package / "evidence_packet.json").write_text('{"doc_id":"demo-doc","items":[]}\n', encoding="utf-8")
+    monkeypatch.setattr("ipo_evidence.cli.docs_dir", lambda: docs)
+
+    with pytest.raises(ValueError, match="manifest doc_id mismatch"):
+        main(["generate-report", "--doc-id", "demo-doc"])
+
+
 def test_main_generate_report_runs_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):
     docs = tmp_path / "docs"
     expected_doc_id = "demo-doc"
@@ -143,6 +176,38 @@ def test_main_generate_report_runs_pipeline(tmp_path: Path, monkeypatch: pytest.
     assert exit_code == 0
     assert captured == {"doc_id": expected_doc_id, "docs_dir": docs}
     assert capsys.readouterr().out == f"reported={expected_doc_id}\n"
+
+
+def test_run_one_keeps_manifest_not_started_when_report_write_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    inbox = tmp_path / "inbox"
+    docs = tmp_path / "docs"
+    inbox.mkdir()
+    pdf = inbox / "测试股份有限公司招股说明书.pdf"
+    pdf.write_bytes(b"%PDF-1.4\nsample")
+    doc_id = pipeline_module.doc_id_for_file(pdf)
+    original_write_text = pipeline_module.write_text
+
+    def flaky_write_text(path: Path, text: str) -> None:
+        if path.name == "report.md":
+            raise RuntimeError("report write failed")
+        original_write_text(path, text)
+
+    monkeypatch.setattr(pipeline_module, "write_text", flaky_write_text)
+
+    with pytest.raises(RuntimeError, match="report write failed"):
+        run_one(
+            pdf_path=pdf,
+            docs_dir=docs,
+            fixture_path=Path("tests/fixtures/sample_prospectus.txt"),
+        )
+
+    manifest = read_json(docs / doc_id / "manifest.json")
+
+    assert manifest["report_status"] == "not_started"
+    assert not (docs / doc_id / "report.md").exists()
 
 
 @pytest.mark.parametrize("limit", ["0", "-1"])
