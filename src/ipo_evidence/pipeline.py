@@ -14,6 +14,19 @@ from ipo_evidence.table_extractor import extract_tables
 from ipo_evidence.web_index import build_web_index
 
 
+def _write_report_artifacts(package_dir: Path, manifest: Manifest, packet: EvidencePacket) -> None:
+    report = generate_report(manifest.company_name, packet)
+    citations = build_citations(packet)
+    web_index = build_web_index(manifest)
+
+    write_text(package_dir / "report.md", report)
+    write_json(
+        package_dir / "citation.json",
+        [citation.model_dump(mode="json") for citation in citations],
+    )
+    write_json(package_dir / "web_index.json", web_index)
+
+
 def run_one(pdf_path: Path, docs_dir: Path, fixture_path: Path) -> str:
     doc_id = doc_id_for_file(pdf_path)
     package_dir = ensure_dir(docs_dir / doc_id)
@@ -34,10 +47,6 @@ def run_one(pdf_path: Path, docs_dir: Path, fixture_path: Path) -> str:
     canonical_ast = map_canonical_sections(source_ast)
     tables = extract_tables(parsed.raw_tables, source_file, ["业务和技术"])
     packet = build_evidence_packet(doc_id, source_file, parsed.blocks, tables)
-    report = generate_report(company_name, packet)
-    citations = build_citations(packet)
-    web_index = build_web_index(manifest)
-
     write_json(package_dir / "manifest.json", manifest)
     write_text(package_dir / "document.md", parsed.markdown)
     write_jsonl(package_dir / "blocks.jsonl", parsed.blocks)
@@ -50,13 +59,8 @@ def run_one(pdf_path: Path, docs_dir: Path, fixture_path: Path) -> str:
     for table in tables:
         write_json(tables_dir / f"{table.table_id}.json", table)
     write_json(package_dir / "evidence_packet.json", packet)
-    write_text(package_dir / "report.md", report)
-    write_json(
-        package_dir / "citation.json",
-        [citation.model_dump(mode="json") for citation in citations],
-    )
     write_json(package_dir / "parse_report.json", parsed.parse_report)
-    write_json(package_dir / "web_index.json", web_index)
+    _write_report_artifacts(package_dir, manifest, packet)
     return doc_id
 
 
@@ -82,13 +86,6 @@ def regenerate_report(doc_id: str, docs_dir: Path) -> None:
             f"evidence packet doc_id mismatch: expected {doc_id}, got {packet.doc_id}"
         )
 
-    report = generate_report(manifest.company_name, packet)
-    citations = build_citations(packet)
-    web_index = build_web_index(manifest)
-
-    write_text(package_dir / "report.md", report)
-    write_json(
-        package_dir / "citation.json",
-        [citation.model_dump(mode="json") for citation in citations],
-    )
-    write_json(package_dir / "web_index.json", web_index)
+    manifest.report_status = "reported"
+    write_json(manifest_path, manifest)
+    _write_report_artifacts(package_dir, manifest, packet)

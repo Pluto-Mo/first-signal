@@ -1,5 +1,9 @@
+import json
 from pathlib import Path
 
+import pytest
+
+from ipo_evidence.cli import main
 from ipo_evidence.io import read_json
 from ipo_evidence.pipeline import regenerate_report, run_one
 
@@ -60,3 +64,90 @@ def test_regenerate_report_rewrites_report_and_citations(tmp_path: Path):
     assert citations[0]["citation_id"] == "C-001"
     assert web_index["doc_id"] == doc_id
     assert web_index["company_name"] == "测试股份有限公司"
+
+
+def test_regenerate_report_updates_manifest_and_web_index_status(tmp_path: Path):
+    inbox = tmp_path / "inbox"
+    docs = tmp_path / "docs"
+    inbox.mkdir()
+    pdf = inbox / "测试股份有限公司招股说明书.pdf"
+    pdf.write_bytes(b"%PDF-1.4\nsample")
+
+    doc_id = run_one(
+        pdf_path=pdf,
+        docs_dir=docs,
+        fixture_path=Path("tests/fixtures/sample_prospectus.txt"),
+    )
+
+    package = docs / doc_id
+    manifest_path = package / "manifest.json"
+    web_index_path = package / "web_index.json"
+    manifest = read_json(manifest_path)
+    manifest["report_status"] = "not_started"
+    web_index = read_json(web_index_path)
+    web_index["report_status"] = "not_started"
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    web_index_path.write_text(json.dumps(web_index, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    regenerate_report(doc_id, docs)
+
+    refreshed_manifest = read_json(manifest_path)
+    refreshed_web_index = read_json(web_index_path)
+
+    assert refreshed_manifest["report_status"] == "reported"
+    assert refreshed_web_index["report_status"] == "reported"
+
+
+def test_regenerate_report_requires_manifest(tmp_path: Path):
+    docs = tmp_path / "docs"
+    package = docs / "demo-doc"
+    package.mkdir(parents=True)
+    (package / "evidence_packet.json").write_text('{"doc_id":"demo-doc","items":[]}\n', encoding="utf-8")
+
+    with pytest.raises(FileNotFoundError, match="missing required artifact"):
+        regenerate_report("demo-doc", docs)
+
+
+def test_regenerate_report_rejects_manifest_doc_id_mismatch(tmp_path: Path):
+    docs = tmp_path / "docs"
+    package = docs / "demo-doc"
+    package.mkdir(parents=True)
+    (package / "manifest.json").write_text(
+        (
+            '{"doc_id":"other-doc","company_name":"测试股份有限公司","source_file":"sample.pdf",'
+            '"parse_status":"parsed","report_status":"not_started","quality_status":"safe_to_use"}\n'
+        ),
+        encoding="utf-8",
+    )
+    (package / "evidence_packet.json").write_text('{"doc_id":"demo-doc","items":[]}\n', encoding="utf-8")
+
+    with pytest.raises(ValueError, match="manifest doc_id mismatch"):
+        regenerate_report("demo-doc", docs)
+
+
+def test_main_generate_report_runs_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):
+    docs = tmp_path / "docs"
+    expected_doc_id = "demo-doc"
+    captured: dict[str, object] = {}
+
+    monkeypatch.setattr("ipo_evidence.cli.docs_dir", lambda: docs)
+
+    def fake_regenerate_report(doc_id: str, base_dir: Path) -> None:
+        captured["doc_id"] = doc_id
+        captured["docs_dir"] = base_dir
+
+    monkeypatch.setattr("ipo_evidence.cli.regenerate_report", fake_regenerate_report)
+
+    exit_code = main(["generate-report", "--doc-id", expected_doc_id])
+
+    assert exit_code == 0
+    assert captured == {"doc_id": expected_doc_id, "docs_dir": docs}
+    assert capsys.readouterr().out == f"reported={expected_doc_id}\n"
+
+
+@pytest.mark.parametrize("limit", ["0", "-1"])
+def test_main_run_rejects_non_positive_limit(limit: str):
+    with pytest.raises(SystemExit) as exc_info:
+        main(["run", "--limit", limit])
+
+    assert exc_info.value.code == 2

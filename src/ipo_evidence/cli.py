@@ -8,6 +8,13 @@ from ipo_evidence.paths import docs_dir, inbox_dir, repo_root
 from ipo_evidence.pipeline import regenerate_report, run_one
 
 
+def _positive_int(value: str) -> int:
+    parsed = int(value)
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return parsed
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ipo-evidence",
@@ -25,7 +32,12 @@ def build_parser() -> argparse.ArgumentParser:
         "run",
         help="Run the local evidence pipeline.",
     )
-    run.add_argument("--limit", type=int, default=3, help="Limit the number of documents.")
+    run.add_argument(
+        "--limit",
+        type=_positive_int,
+        default=3,
+        help="Limit the number of documents.",
+    )
     run.set_defaults(handler=handle_run)
 
     generate_report = subparsers.add_parser(
