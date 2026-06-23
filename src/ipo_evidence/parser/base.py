@@ -13,6 +13,7 @@ class ParserOutput(BaseModel):
     blocks: list[Block]
     raw_tables: list[dict] = Field(default_factory=list)
     parse_report: dict
+    raw_artifacts: dict = Field(default_factory=dict)
 
 
 class Parser(Protocol):
