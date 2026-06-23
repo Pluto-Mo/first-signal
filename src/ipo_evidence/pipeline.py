@@ -5,8 +5,8 @@ from pathlib import Path
 from ipo_evidence.citation_layer import build_citations
 from ipo_evidence.evidence import build_evidence_packet
 from ipo_evidence.ingest import company_name_from_filename, doc_id_for_file
-from ipo_evidence.io import ensure_dir, write_json, write_jsonl, write_text
-from ipo_evidence.models import Manifest, QualityStatus
+from ipo_evidence.io import ensure_dir, read_json, write_json, write_jsonl, write_text
+from ipo_evidence.models import EvidencePacket, Manifest, QualityStatus
 from ipo_evidence.parser.api_stub import ApiStubParser
 from ipo_evidence.report_generator import generate_report
 from ipo_evidence.section_mapper import build_source_ast, map_canonical_sections
@@ -58,3 +58,37 @@ def run_one(pdf_path: Path, docs_dir: Path, fixture_path: Path) -> str:
     write_json(package_dir / "parse_report.json", parsed.parse_report)
     write_json(package_dir / "web_index.json", web_index)
     return doc_id
+
+
+def regenerate_report(doc_id: str, docs_dir: Path) -> None:
+    package_dir = docs_dir / doc_id
+    if not package_dir.exists() or not package_dir.is_dir():
+        raise FileNotFoundError(f"document package not found for doc_id={doc_id}")
+
+    manifest_path = package_dir / "manifest.json"
+    packet_path = package_dir / "evidence_packet.json"
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"missing required artifact: {manifest_path}")
+    if not packet_path.exists():
+        raise FileNotFoundError(f"missing required artifact: {packet_path}")
+
+    manifest = Manifest.model_validate(read_json(manifest_path))
+    if manifest.doc_id != doc_id:
+        raise ValueError(f"manifest doc_id mismatch: expected {doc_id}, got {manifest.doc_id}")
+
+    packet = EvidencePacket.model_validate(read_json(packet_path))
+    if packet.doc_id != doc_id:
+        raise ValueError(
+            f"evidence packet doc_id mismatch: expected {doc_id}, got {packet.doc_id}"
+        )
+
+    report = generate_report(manifest.company_name, packet)
+    citations = build_citations(packet)
+    web_index = build_web_index(manifest)
+
+    write_text(package_dir / "report.md", report)
+    write_json(
+        package_dir / "citation.json",
+        [citation.model_dump(mode="json") for citation in citations],
+    )
+    write_json(package_dir / "web_index.json", web_index)

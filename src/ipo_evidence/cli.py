@@ -5,7 +5,7 @@ from pathlib import Path
 
 from ipo_evidence.ingest import scan_inbox
 from ipo_evidence.paths import docs_dir, inbox_dir, repo_root
-from ipo_evidence.pipeline import run_one
+from ipo_evidence.pipeline import regenerate_report, run_one
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -60,7 +60,8 @@ def handle_run(args: argparse.Namespace) -> int:
 
 
 def handle_generate_report(args: argparse.Namespace) -> int:
-    print(f"report generation is included in pipeline for doc_id={args.doc_id}")
+    regenerate_report(args.doc_id, docs_dir())
+    print(f"reported={args.doc_id}")
     return 0
 
 
