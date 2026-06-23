@@ -1,0 +1,17 @@
+provider: paddleocr_vl
+input_type: local_pdf
+preserve_source_pdf: true
+token_env_var: PADDLEOCR_API_TOKEN
+job_url: https://paddleocr.aistudio-app.com/api/v2/ocr/jobs
+model: PaddleOCR-VL-1.6
+poll_interval_seconds: 5
+poll_timeout_seconds: 600
+optional_payload:
+  useDocOrientationClassify: false
+  useDocUnwarping: false
+  useChartRecognition: false
+outputs:
+  markdown: document.md
+  blocks: blocks.jsonl
+  raw_tables: raw_tables.json
+  parse_report: parse_report.json

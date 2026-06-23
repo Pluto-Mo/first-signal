@@ -275,7 +275,7 @@ do_not_use
 
 ### 8.4 引用质量
 
-报告核心判断必须带 citation。citation 允许 `source_url: null`，但不允许缺少 `source_file`、`page_number`、`block_id` 或 `section_path`。
+报告核心判断必须带 citation。citation 允许 `source_url: null`。文本引用不允许缺少 `source_file`、`page_number`、`block_id`、`section_path` 或 `quote`。表格引用使用 `table_id` 作为结构化对象定位，不要求 `block_id`，但不允许缺少 `source_file`、`page_number`、`table_id`、`table_title`、非空字段值或 `section_path`。
 
 ## 9. 失败处理
 

@@ -1,0 +1,13 @@
+parse_quality:
+  max_garbled_ratio: 0.05
+  min_non_empty_pages: 3
+section_quality:
+  min_required_major_sections: 3
+table_quality:
+  min_quality_score_for_evidence: 0.75
+citation_quality:
+  required_fields:
+    - source_file
+    - page_number
+    - block_id
+    - section_path
