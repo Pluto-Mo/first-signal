@@ -13,7 +13,7 @@ from ipo_evidence.report_inputs import build_report_inputs
 from ipo_evidence.report_generator import generate_report
 from ipo_evidence.section_mapper import assign_section_paths, build_source_ast, map_canonical_sections
 from ipo_evidence.table_extractor import extract_tables
-from ipo_evidence.web_index import build_web_index
+from ipo_evidence.web_index import build_web_index, refresh_docs_index
 
 
 def _write_report_artifacts(package_dir: Path, manifest: Manifest, packet: EvidencePacket) -> None:
@@ -74,6 +74,7 @@ def run_one(pdf_path: Path, docs_dir: Path, fixture_path: Path) -> str:
     manifest.report_status = "reported"
     write_json(package_dir / "manifest.json", manifest)
     write_json(package_dir / "web_index.json", build_web_index(manifest))
+    refresh_docs_index(docs_dir)
     return doc_id
 
 
@@ -102,3 +103,4 @@ def regenerate_report(doc_id: str, docs_dir: Path) -> None:
     manifest.report_status = "reported"
     write_json(manifest_path, manifest)
     _write_report_artifacts(package_dir, manifest, packet)
+    refresh_docs_index(docs_dir)

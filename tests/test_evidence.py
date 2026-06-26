@@ -156,6 +156,49 @@ def test_build_evidence_packet_keeps_high_information_text_without_numbers():
     assert packet.items[0].block_id == "B-000400"
 
 
+def test_build_evidence_packet_maps_financial_risk_governance_and_related_party_sections():
+    blocks = [
+        Block(
+            block_id="B-000500",
+            page_number=40,
+            text="公司研发费用持续增长，主要系研发人员薪酬和股份支付增加。",
+            section_path=["财务会计信息", "研发费用"],
+        ),
+        Block(
+            block_id="B-000501",
+            page_number=8,
+            text="公司经营活动产生的现金流量净额持续为负，存在盈利质量承压风险。",
+            section_path=["风险因素", "与发行人相关的风险", "经营活动产生的现金流量净额持续为负值的风险"],
+        ),
+        Block(
+            block_id="B-000502",
+            page_number=70,
+            text="公司已建立股东会、董事会、专门委员会等治理制度安排。",
+            section_path=["公司治理", "公司治理制度的建立健全"],
+        ),
+        Block(
+            block_id="B-000503",
+            page_number=72,
+            text="公司与关联方之间存在采购商品、提供服务等经常性关联交易。",
+            section_path=["关联交易", "经常性关联交易"],
+        ),
+    ]
+
+    packet = build_evidence_packet(
+        doc_id="doc_test",
+        source_file="测试股份有限公司招股说明书.pdf",
+        blocks=blocks,
+        tables=[],
+    )
+
+    assert [item.canonical_section for item in packet.items] == [
+        "financials",
+        "risks",
+        "governance",
+        "related_party",
+    ]
+
+
 def test_build_evidence_packet_excludes_low_quality_tables():
     packet = build_evidence_packet(
         doc_id="doc_test",

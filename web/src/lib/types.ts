@@ -42,4 +42,5 @@ export interface DocumentRecord {
   quality: QualityStatus;
   sections: ReportSection[];
   citations: Citation[];
+  sourceMarkdown: string;
 }

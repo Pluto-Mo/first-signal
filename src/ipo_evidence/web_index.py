@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+from ipo_evidence.io import read_json, write_json
 from ipo_evidence.models import Manifest, WebIndex
 
 
@@ -13,3 +16,13 @@ def build_web_index(manifest: Manifest) -> WebIndex:
         report_status=manifest.report_status,
         tags=manifest.tags,
     )
+
+
+def refresh_docs_index(docs_root: Path) -> list[dict]:
+    items: list[dict] = []
+    for web_index_path in sorted(docs_root.glob("*/web_index.json")):
+        payload = read_json(web_index_path)
+        if isinstance(payload, dict):
+            items.append(payload)
+    write_json(docs_root / "index.json", items)
+    return items

@@ -3,6 +3,7 @@ import type { Citation } from "../lib/types";
 
 interface SourceViewProps {
   citation: Citation;
+  sourceMarkdown: string;
 }
 
 const orderedFields: Array<keyof Citation["location"]> = [
@@ -15,7 +16,7 @@ const orderedFields: Array<keyof Citation["location"]> = [
   "field_value"
 ];
 
-export function SourceView({ citation }: SourceViewProps) {
+export function SourceView({ citation, sourceMarkdown }: SourceViewProps) {
   return (
     <section className="source-view" aria-labelledby="source-view-title">
       <div className="panel-header">
@@ -38,6 +39,8 @@ export function SourceView({ citation }: SourceViewProps) {
             </div>
           ))}
       </dl>
+
+      <pre className="source-markdown-preview">{sourceMarkdown}</pre>
     </section>
   );
 }

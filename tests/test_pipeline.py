@@ -45,6 +45,8 @@ def test_run_one_creates_document_package(tmp_path: Path):
     assert (package / "report.md").exists()
     assert (package / "citation.json").exists()
     assert (package / "web_index.json").exists()
+    docs_index = read_json(docs / "index.json")
+    assert docs_index[0]["doc_id"] == doc_id
 
 
 def test_run_one_uses_parser_selected_from_config(
@@ -153,9 +155,11 @@ def test_regenerate_report_updates_manifest_and_web_index_status(tmp_path: Path)
 
     refreshed_manifest = read_json(manifest_path)
     refreshed_web_index = read_json(web_index_path)
+    docs_index = read_json(docs / "index.json")
 
     assert refreshed_manifest["report_status"] == "reported"
     assert refreshed_web_index["report_status"] == "reported"
+    assert docs_index[0]["report_status"] == "reported"
 
 
 def test_regenerate_report_requires_manifest(tmp_path: Path):
@@ -235,6 +239,22 @@ def test_main_generate_report_runs_pipeline(tmp_path: Path, monkeypatch: pytest.
     assert exit_code == 0
     assert captured == {"doc_id": expected_doc_id, "docs_dir": docs}
     assert capsys.readouterr().out == f"reported={expected_doc_id}\n"
+
+
+def test_main_loads_project_env_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    captured: dict[str, Path] = {}
+
+    monkeypatch.setattr("ipo_evidence.cli.repo_root", lambda: tmp_path)
+    monkeypatch.setattr(
+        "ipo_evidence.cli.load_dotenv",
+        lambda path: captured.setdefault("path", Path(path)),
+    )
+    monkeypatch.setattr("ipo_evidence.cli.handle_scan_inbox", lambda _args: 0)
+
+    exit_code = main(["scan-inbox"])
+
+    assert exit_code == 0
+    assert captured["path"] == tmp_path / ".env"
 
 
 def test_run_one_keeps_manifest_not_started_when_report_write_fails(

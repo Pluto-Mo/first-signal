@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from ipo_evidence.ingest import scan_inbox
 from ipo_evidence.paths import docs_dir, inbox_dir, repo_root
 from ipo_evidence.pipeline import regenerate_report, run_one
@@ -78,6 +80,7 @@ def handle_generate_report(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    load_dotenv(repo_root() / ".env")
     parser = build_parser()
     args = parser.parse_args(argv)
     return args.handler(args)

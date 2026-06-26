@@ -10,13 +10,22 @@ function buildCitationLookup(citations: Citation[]) {
   return Object.fromEntries(citations.map((citation) => [citation.id, citation]));
 }
 
+function firstCitationId(document: ReturnType<typeof getDocumentById>) {
+  for (const section of document.sections) {
+    for (const block of section.blocks) {
+      if (block.citationIds.length > 0) {
+        return block.citationIds[0];
+      }
+    }
+  }
+  return document.citations[0]?.id ?? "";
+}
+
 export default function App() {
   const [selectedDocumentId, setSelectedDocumentId] = useState(documents[0].id);
   const document = getDocumentById(selectedDocumentId);
   const [selectedSectionId, setSelectedSectionId] = useState(document.sections[0].id);
-  const [selectedCitationId, setSelectedCitationId] = useState(
-    document.sections[0].blocks[0].citationIds[0]
-  );
+  const [selectedCitationId, setSelectedCitationId] = useState(firstCitationId(document));
 
   const citationLookup = useMemo(
     () => buildCitationLookup(document.citations),
@@ -31,7 +40,7 @@ export default function App() {
 
     setSelectedDocumentId(documentId);
     setSelectedSectionId(nextDocument.sections[0].id);
-    setSelectedCitationId(nextDocument.sections[0].blocks[0].citationIds[0]);
+    setSelectedCitationId(firstCitationId(nextDocument));
   }
 
   function handleSectionSelect(sectionId: string) {
@@ -40,7 +49,9 @@ export default function App() {
       document.sections[0];
 
     setSelectedSectionId(nextSection.id);
-    setSelectedCitationId(nextSection.blocks[0].citationIds[0]);
+    if (nextSection.blocks[0].citationIds[0]) {
+      setSelectedCitationId(nextSection.blocks[0].citationIds[0]);
+    }
   }
 
   return (
@@ -75,7 +86,7 @@ export default function App() {
 
         <div className="side-column">
           <CitationPanel citation={citation} />
-          <SourceView citation={citation} />
+          <SourceView citation={citation} sourceMarkdown={document.sourceMarkdown} />
         </div>
       </main>
     </div>
