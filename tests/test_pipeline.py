@@ -237,6 +237,22 @@ def test_main_generate_report_runs_pipeline(tmp_path: Path, monkeypatch: pytest.
     assert capsys.readouterr().out == f"reported={expected_doc_id}\n"
 
 
+def test_main_loads_project_env_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    captured: dict[str, Path] = {}
+
+    monkeypatch.setattr("ipo_evidence.cli.repo_root", lambda: tmp_path)
+    monkeypatch.setattr(
+        "ipo_evidence.cli.load_dotenv",
+        lambda path: captured.setdefault("path", Path(path)),
+    )
+    monkeypatch.setattr("ipo_evidence.cli.handle_scan_inbox", lambda _args: 0)
+
+    exit_code = main(["scan-inbox"])
+
+    assert exit_code == 0
+    assert captured["path"] == tmp_path / ".env"
+
+
 def test_run_one_keeps_manifest_not_started_when_report_write_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

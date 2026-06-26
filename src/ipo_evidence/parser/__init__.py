@@ -16,6 +16,8 @@ def create_parser(config: dict, fixture_path: Path | None = None):
     if provider == "paddleocr_vl":
         token_env_var = config.get("token_env_var", "PADDLEOCR_API_TOKEN")
         if not os.getenv(token_env_var):
+            if fixture_path is not None:
+                return ApiStubParser(fixture_path=fixture_path)
             raise RuntimeError(
                 f"Missing required parser token in environment variable: {token_env_var}"
             )

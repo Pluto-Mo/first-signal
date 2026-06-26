@@ -1,6 +1,6 @@
 from ipo_evidence.citation_layer import build_citations
 from ipo_evidence.evidence import build_evidence_packet
-from ipo_evidence.models import Block, TableObject
+from ipo_evidence.models import Block, EvidenceItem, EvidencePacket, QualityStatus, TableObject
 from ipo_evidence.report_generator import generate_report
 
 
@@ -117,7 +117,178 @@ def test_mixed_text_and_table_report_citations_keep_matching_order():
 
     assert "[C-001]" in draft
     assert "[C-002]" in draft
+    assert "[C-003]" in draft
     assert citations[0].citation_id == "C-001"
     assert citations[0].block_id == "B-000002"
     assert citations[1].citation_id == "C-002"
-    assert citations[1].table_id == "T-001"
+    assert citations[1].block_id == "B-000002"
+    assert citations[2].citation_id == "C-003"
+    assert citations[2].table_id == "T-001"
+
+
+def test_generate_report_creates_basic_long_form_report_from_evidence_packet():
+    packet = EvidencePacket(
+        doc_id="doc_test",
+        items=[
+            EvidenceItem(
+                evidence_id="E-001",
+                canonical_section="about_company",
+                claim_summary="公司主要从事智能硬件产品的研发、生产和销售。",
+                source_type="text_quote",
+                source_file="测试股份有限公司招股说明书.pdf",
+                page_number=2,
+                block_id="B-000002",
+                section_path=["发行人基本情况"],
+                quote="公司主要从事智能硬件产品的研发、生产和销售。",
+                quality_status=QualityStatus.safe_to_use,
+            ),
+            EvidenceItem(
+                evidence_id="E-002",
+                canonical_section="business_and_product",
+                claim_summary="公司的主要产品包括智能控制器和消费级智能终端。",
+                source_type="text_quote",
+                source_file="测试股份有限公司招股说明书.pdf",
+                page_number=3,
+                block_id="B-000003",
+                section_path=["业务和技术"],
+                quote="公司的主要产品包括智能控制器和消费级智能终端。",
+                quality_status=QualityStatus.safe_to_use,
+            ),
+            EvidenceItem(
+                evidence_id="E-003",
+                canonical_section="financials",
+                claim_summary="报告期内公司营业收入持续增长。",
+                source_type="text_quote",
+                source_file="测试股份有限公司招股说明书.pdf",
+                page_number=4,
+                block_id="B-000004",
+                section_path=["财务会计信息"],
+                quote="报告期内公司营业收入持续增长。",
+                quality_status=QualityStatus.safe_to_use,
+            ),
+            EvidenceItem(
+                evidence_id="E-004",
+                canonical_section="use_of_proceeds",
+                claim_summary="募集资金拟用于智能制造基地建设项目。",
+                source_type="text_quote",
+                source_file="测试股份有限公司招股说明书.pdf",
+                page_number=5,
+                block_id="B-000005",
+                section_path=["募集资金运用"],
+                quote="募集资金拟用于智能制造基地建设项目。",
+                quality_status=QualityStatus.safe_to_use,
+            ),
+            EvidenceItem(
+                evidence_id="E-005",
+                canonical_section="risks",
+                claim_summary="公司存在客户集中度较高的风险。",
+                source_type="text_quote",
+                source_file="测试股份有限公司招股说明书.pdf",
+                page_number=6,
+                block_id="B-000006",
+                section_path=["风险因素"],
+                quote="公司存在客户集中度较高的风险。",
+                quality_status=QualityStatus.safe_to_use,
+            ),
+        ],
+    )
+
+    draft = generate_report("测试股份有限公司", packet)
+
+    assert "招股书长篇阅读" in draft
+    assert "公司介绍与行业概况" in draft
+    assert "个人投资视角" in draft
+    assert "认知世界的方式" in draft
+    assert "[C-001]" in draft
+    assert "[C-005]" in draft
+    assert len(draft.splitlines()) >= 45
+
+
+def test_generate_report_uses_report_inputs_section_groups():
+    packet = EvidencePacket(
+        doc_id="doc_test",
+        items=[
+            EvidenceItem(
+                evidence_id="E-001",
+                canonical_section="business_and_product",
+                claim_summary="产品收入结构表显示智能控制器收入占比最高。",
+                source_type="table_fact",
+                source_file="测试股份有限公司招股说明书.pdf",
+                page_number=3,
+                table_id="T-001",
+                table_title="产品收入结构表",
+                section_path=["业务和技术"],
+                fields={"产品": "智能控制器", "占比": "45.2%"},
+                quality_status=QualityStatus.safe_to_use,
+            )
+        ],
+    )
+    report_inputs = {
+        "doc_id": "doc_test",
+        "company_name": "测试股份有限公司",
+        "outline": ["personal_investment"],
+        "section_groups": [
+            {
+                "section_key": "personal_investment",
+                "title": "个人投资视角",
+                "focus_points": ["产品可信度", "收入集中度"],
+                "output_order": 2,
+                "evidence_refs": [{"evidence_id": "E-001", "rank": 1}],
+            }
+        ],
+    }
+
+    draft = generate_report("测试股份有限公司", packet, report_inputs)
+
+    assert "个人投资视角" in draft
+    assert "产品收入结构表显示：产品：智能控制器；占比：45.2%" in draft
+    assert "[C-001]" in draft
+
+
+def test_generate_report_avoids_internal_system_wording():
+    packet = EvidencePacket(
+        doc_id="doc_test",
+        items=[
+            EvidenceItem(
+                evidence_id="E-001",
+                canonical_section="about_company",
+                claim_summary="公司主要从事智能硬件产品的研发、生产和销售。",
+                source_type="text_quote",
+                source_file="测试股份有限公司招股说明书.pdf",
+                page_number=2,
+                block_id="B-000002",
+                section_path=["发行人基本情况"],
+                quote="公司主要从事智能硬件产品的研发、生产和销售。",
+                quality_status=QualityStatus.safe_to_use,
+            ),
+            EvidenceItem(
+                evidence_id="E-002",
+                canonical_section="business_and_product",
+                claim_summary="公司的主要产品包括智能控制器和消费级智能终端。",
+                source_type="text_quote",
+                source_file="测试股份有限公司招股说明书.pdf",
+                page_number=3,
+                block_id="B-000003",
+                section_path=["业务和技术"],
+                quote="公司的主要产品包括智能控制器和消费级智能终端。",
+                quality_status=QualityStatus.safe_to_use,
+            ),
+        ],
+    )
+
+    draft = generate_report("测试股份有限公司", packet)
+
+    assert "公司介绍与行业概况" in draft
+    assert "个人投资视角" in draft
+    assert "认知世界的方式" in draft
+    banned_phrases = [
+        "当前报告",
+        "系统链路",
+        "input 层",
+        "report 层",
+        "生成器",
+        "技术测试",
+        "评估器",
+        "证据清单",
+    ]
+    assert all(phrase not in draft for phrase in banned_phrases)
