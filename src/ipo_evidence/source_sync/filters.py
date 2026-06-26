@@ -41,19 +41,18 @@ def build_filter_result(candidate: SyncCandidate, config: dict) -> FilterResult:
     filter_threshold = int(config.get("thresholds", {}).get("filter_score", 6))
     observe_threshold = int(config.get("thresholds", {}).get("observe_score", 3))
 
-    if matched_any_rule and score < observe_threshold:
-        score = observe_threshold
-
     if score >= filter_threshold:
         decision = FilterDecision.filter
     elif score >= observe_threshold:
+        decision = FilterDecision.observe
+    elif matched_any_rule:
         decision = FilterDecision.observe
     else:
         decision = FilterDecision.allow
 
     return FilterResult(
         decision=decision,
-        score=max(score, 0),
+        score=score,
         matched_rules=matched_rules,
         matched_terms=sorted(set(matched_terms)),
         reason=reason if decision != FilterDecision.allow else "passed filter rules",

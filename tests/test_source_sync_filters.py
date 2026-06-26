@@ -91,4 +91,4 @@ def test_build_filter_result_downgrades_to_observe_when_commercial_context_exist
     )
 
     assert result.decision == FilterDecision.observe
-    assert result.score == 3
+    assert result.score == 2
