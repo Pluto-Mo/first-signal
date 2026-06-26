@@ -1,0 +1,46 @@
+thresholds:
+  filter_score: 6
+  observe_score: 3
+body_title_exclude:
+  - 提示性公告
+  - 摘要
+  - 英文版
+  - 更正
+  - H股
+  - 港股
+  - 香港公开发售
+  - 全球发售
+  - 问询回复
+  - 法律意见书
+  - 审计报告
+commercial_buffer_terms:
+  - 客户
+  - 收入
+  - 市场
+  - 量产
+  - 应用场景
+  - 解决方案
+  - 商业化
+rules:
+  - rule_id: hard_pharma_specific_01
+    action: filter
+    score: 4
+    min_hits: 2
+    terms:
+      - 临床试验
+      - 候选药物
+      - 适应症
+      - 药代动力学
+      - 体内外评价
+    reason: 偏临床研发导向且专业门槛高
+  - rule_id: hard_materials_specific_01
+    action: filter
+    score: 4
+    min_hits: 2
+    terms:
+      - 前驱体
+      - 溅射靶材
+      - 电子特气
+      - 光刻胶
+      - 蒸镀材料
+    reason: 偏上游工艺材料且专业门槛高

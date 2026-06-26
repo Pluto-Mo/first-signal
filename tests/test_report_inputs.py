@@ -3,7 +3,7 @@ from ipo_evidence.models import Block
 from ipo_evidence.report_inputs import build_report_inputs
 
 
-def test_build_report_inputs_groups_evidence_by_section_key():
+def test_build_report_inputs_groups_evidence_by_reading_view():
     packet = build_evidence_packet(
         doc_id="doc_test",
         source_file="测试股份有限公司招股说明书.pdf",
@@ -28,8 +28,12 @@ def test_build_report_inputs_groups_evidence_by_section_key():
 
     assert report_inputs["doc_id"] == "doc_test"
     assert report_inputs["company_name"] == "测试股份有限公司"
-    assert report_inputs["outline"] == ["about_company", "business_and_product"]
-    assert report_inputs["section_groups"][0]["section_key"] == "about_company"
+    assert report_inputs["outline"] == [
+        "company_and_industry",
+        "personal_investment",
+        "cognitive_worldview",
+    ]
+    assert report_inputs["section_groups"][0]["section_key"] == "company_and_industry"
 
 
 def test_build_report_inputs_keeps_dispatch_view_lightweight():
@@ -50,8 +54,8 @@ def test_build_report_inputs_keeps_dispatch_view_lightweight():
     report_inputs = build_report_inputs("doc_test", "测试股份有限公司", packet)
 
     section = report_inputs["section_groups"][0]
-    assert section["title"] == "关于公司"
-    assert section["prompt_slot"] == "about_company"
+    assert section["title"] == "公司介绍与行业概况"
+    assert section["prompt_slot"] == "company_and_industry"
     assert section["focus_points"] != []
     assert section["constraints"] != []
     assert section["output_order"] == 1

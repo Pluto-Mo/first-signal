@@ -1,0 +1,18 @@
+source: cninfo
+window:
+  lookback_days: 7
+  overlap_days: 3
+limits:
+  max_candidates: 20
+  max_downloads: 3
+throttle:
+  request_interval_seconds: 2.0
+  jitter_seconds: 0.5
+paths:
+  inbox_dir: data/inbox
+  state_dir: data/tmp/source_sync
+cninfo:
+  announcement_search_url: https://www.cninfo.com.cn/new/hisAnnouncement/query
+  prospectus_list_url: https://www.cninfo.com.cn/data20/ipoProspectus/getIpoProspectus
+  user_agent: Mozilla/5.0
+  referer: https://www.cninfo.com.cn/new/commonUrl?pageOfSearch=disclosure/list/search

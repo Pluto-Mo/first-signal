@@ -31,9 +31,10 @@ def test_build_evidence_packet_uses_text_and_table_sources():
         tables=tables,
     )
 
-    assert len(packet.items) == 2
+    assert len(packet.items) == 3
     assert packet.items[0].quality_status == QualityStatus.safe_to_use
-    assert packet.items[1].table_id == "T-001"
+    assert packet.items[1].claim_summary == "公司业务链条覆盖研发、生产和销售环节。"
+    assert packet.items[2].table_id == "T-001"
 
 
 def test_build_evidence_packet_excludes_directory_and_heading_only_blocks():
@@ -108,6 +109,36 @@ def test_build_evidence_packet_excludes_html_table_blocks_and_non_body_sections(
     assert packet.items[0].block_id == "B-000200"
 
 
+def test_build_evidence_packet_extracts_high_value_html_tables():
+    blocks = [
+        Block(
+            block_id="B-000500",
+            page_number=12,
+            text=(
+                "<table border=1>"
+                "<tr><td>项目</td><td>2025年度</td><td>2024年度</td></tr>"
+                "<tr><td>营业收入</td><td>68,771.52万元</td><td>60,077.16万元</td></tr>"
+                "<tr><td>研发费用</td><td>25,351.32万元</td><td>26,429.85万元</td></tr>"
+                "</table>"
+            ),
+            section_path=["财务会计信息", "主要财务数据"],
+        )
+    ]
+
+    packet = build_evidence_packet(
+        doc_id="doc_test",
+        source_file="测试股份有限公司招股说明书.pdf",
+        blocks=blocks,
+        tables=[],
+    )
+
+    assert packet.items
+    assert all(item.source_type == "table_fact" for item in packet.items)
+    assert packet.items[0].table_id == "HT-B-000500-01"
+    assert packet.items[0].fields["项目"] == "营业收入"
+    assert packet.items[1].fields["项目"] == "研发费用"
+
+
 def test_build_evidence_packet_excludes_low_signal_reference_sentences():
     blocks = [
         Block(
@@ -155,7 +186,6 @@ def test_build_evidence_packet_keeps_high_information_text_without_numbers():
     assert len(packet.items) == 1
     assert packet.items[0].block_id == "B-000400"
 
-
 def test_build_evidence_packet_maps_financial_risk_governance_and_related_party_sections():
     blocks = [
         Block(
@@ -197,6 +227,44 @@ def test_build_evidence_packet_maps_financial_risk_governance_and_related_party_
         "governance",
         "related_party",
     ]
+
+
+def test_build_evidence_packet_extracts_text_from_heading_mixed_blocks():
+    blocks = [
+        Block(
+            block_id="B-000002",
+            page_number=2,
+            text="## 第一节 发行人基本情况\n公司主要从事智能硬件产品的研发、生产和销售。",
+            section_path=["测试股份有限公司招股说明书"],
+        ),
+        Block(
+            block_id="B-000003",
+            page_number=3,
+            text="## 第二节 业务和技术\n公司的主要产品包括智能控制器和消费级智能终端。",
+            section_path=["测试股份有限公司招股说明书"],
+        ),
+        Block(
+            block_id="B-000005",
+            page_number=5,
+            text="## 第三节 财务会计信息\n报告期内公司营业收入持续增长。",
+            section_path=["测试股份有限公司招股说明书"],
+        ),
+    ]
+
+    packet = build_evidence_packet(
+        doc_id="doc_test",
+        source_file="测试股份有限公司招股说明书.pdf",
+        blocks=blocks,
+        tables=[],
+    )
+
+    assert [item.canonical_section for item in packet.items] == [
+        "about_company",
+        "business_and_product",
+        "business_and_product",
+        "financials",
+    ]
+    assert packet.items[0].quote == "公司主要从事智能硬件产品的研发、生产和销售。"
 
 
 def test_build_evidence_packet_excludes_low_quality_tables():
@@ -241,6 +309,39 @@ def test_build_evidence_packet_excludes_tables_without_fields():
     )
 
     assert packet.items == []
+
+
+def test_build_evidence_packet_creates_evidence_for_each_table_row_and_summary():
+    packet = build_evidence_packet(
+        doc_id="doc_test",
+        source_file="测试股份有限公司招股说明书.pdf",
+        blocks=[],
+        tables=[
+            TableObject(
+                table_id="T-001",
+                title="产品收入结构表",
+                source_file="测试股份有限公司招股说明书.pdf",
+                page_number=3,
+                section_path=["业务和技术"],
+                columns=["产品", "2023年收入", "占比"],
+                rows=[
+                    ["智能控制器", "12000万元", "45.2%"],
+                    ["智能终端", "9800万元", "36.9%"],
+                ],
+                quality_score=0.9,
+            )
+        ],
+    )
+
+    assert len(packet.items) == 6
+    assert packet.items[0].fields["产品"] == "智能控制器"
+    assert packet.items[1].fields["产品"] == "智能终端"
+    assert packet.items[2].fields["覆盖项目"] == "智能控制器、智能终端"
+    assert packet.items[2].fields["2023年收入合计"] == "21800万元"
+    assert packet.items[3].fields["集中度判断"] == "超过八成"
+    assert packet.items[4].fields["差额"] == "2200万元"
+    assert packet.items[5].fields["比较指标"] == "占比"
+    assert packet.items[5].fields["差额"] == "8.3个百分点"
 
 
 def test_build_evidence_packet_uses_section_fallback_for_table_sources():

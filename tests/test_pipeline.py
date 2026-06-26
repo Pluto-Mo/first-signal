@@ -122,7 +122,7 @@ def test_regenerate_report_rewrites_report_and_citations(tmp_path: Path):
     web_index = read_json(package / "web_index.json")
 
     assert "broken report" not in report_text
-    assert "# 测试股份有限公司招股书解读" in report_text
+    assert "# 测试股份有限公司招股书长篇阅读" in report_text
     assert citations[0]["citation_id"] == "C-001"
     assert web_index["doc_id"] == doc_id
     assert web_index["company_name"] == "测试股份有限公司"

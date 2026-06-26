@@ -16,8 +16,23 @@ from ipo_evidence.table_extractor import extract_tables
 from ipo_evidence.web_index import build_web_index, refresh_docs_index
 
 
-def _write_report_artifacts(package_dir: Path, manifest: Manifest, packet: EvidencePacket) -> None:
-    report = generate_report(manifest.company_name, packet)
+def _read_report_inputs(package_dir: Path) -> dict | None:
+    report_inputs_path = package_dir / "report_inputs.json"
+    if not report_inputs_path.exists():
+        return None
+    report_inputs = read_json(report_inputs_path)
+    if not isinstance(report_inputs, dict):
+        raise ValueError(f"report_inputs must be a JSON object: {report_inputs_path}")
+    return report_inputs
+
+
+def _write_report_artifacts(
+    package_dir: Path,
+    manifest: Manifest,
+    packet: EvidencePacket,
+    report_inputs: dict | None = None,
+) -> None:
+    report = generate_report(manifest.company_name, packet, report_inputs)
     citations = build_citations(packet)
     web_index = build_web_index(manifest)
 
@@ -70,7 +85,7 @@ def run_one(pdf_path: Path, docs_dir: Path, fixture_path: Path) -> str:
     write_json(package_dir / "parse_report.json", parsed.parse_report)
     if parsed.raw_artifacts:
         write_json(package_dir / "parser_raw.json", parsed.raw_artifacts)
-    _write_report_artifacts(package_dir, manifest, packet)
+    _write_report_artifacts(package_dir, manifest, packet, report_inputs)
     manifest.report_status = "reported"
     write_json(package_dir / "manifest.json", manifest)
     write_json(package_dir / "web_index.json", build_web_index(manifest))
@@ -99,8 +114,13 @@ def regenerate_report(doc_id: str, docs_dir: Path) -> None:
         raise ValueError(
             f"evidence packet doc_id mismatch: expected {doc_id}, got {packet.doc_id}"
         )
+    report_inputs = _read_report_inputs(package_dir)
+    if report_inputs and report_inputs.get("doc_id") != doc_id:
+        raise ValueError(
+            f"report inputs doc_id mismatch: expected {doc_id}, got {report_inputs.get('doc_id')}"
+        )
 
     manifest.report_status = "reported"
     write_json(manifest_path, manifest)
-    _write_report_artifacts(package_dir, manifest, packet)
+    _write_report_artifacts(package_dir, manifest, packet, report_inputs)
     refresh_docs_index(docs_dir)
