@@ -87,13 +87,13 @@ data/inbox/*.pdf
 
 ### 5.1 主抓取源
 
-第一版 A 股主抓取源使用巨潮资讯。
+第一版 A 股主抓取源使用巨潮资讯的两段式免费接口。
 
 原因：
 
-- 统一返回招股说明书正文 PDF 的公告列表。
-- 便于少量真实样本联调。
-- 与现有本地 PDF 入口天然衔接。
+- `data20/ipoProspectus/getIpoProspectus` 能提供更接近上市进程列表的最新候选池，附带行业、披露阶段和公司简介等筛选字段。
+- `new/hisAnnouncement/query` 能补齐正文 PDF 公告与公告 ID，便于做“只抓正文、不抓提示性公告”的二次确认。
+- 两段式方案比单纯按字段全文搜公告更稳，也更符合“尽量不缺 PDF”的目标。
 
 ### 5.2 正文 PDF 口径
 
@@ -157,6 +157,11 @@ src/ipo_evidence/source_sync/
 ### 7.1 client
 
 负责源站请求、候选发现、字段归一化。
+
+第一版 client 采用两步：
+
+- 先从 `ipoProspectus` 列表接口按时间倒序发现候选公司与阶段信息。
+- 再按 `company_name + 招股说明书` 或 `security_code + 招股说明书` 查询公告接口，补齐正文 PDF 地址与公告 ID。
 
 ### 7.2 filters
 

@@ -36,6 +36,14 @@ npm --prefix web run build
 python -m ipo_evidence.cli run --limit 1
 ```
 
+## A-share source sync
+
+```powershell
+python -m ipo_evidence.source_sync.cli sync-a-share --days 7 --limit 3
+```
+
+This command discovers a small number of recent A-share prospectus candidates, filters out non-body or blacklisted samples, and downloads allowed PDFs into `data/inbox/` without automatically triggering OCR.
+
 ## Data policy
 
 `data/inbox/` contains user-owned PDF inputs. The system must not delete files in that directory.
