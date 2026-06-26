@@ -46,6 +46,8 @@ def test_filter_result_requires_reason_for_filtered_item():
 def test_download_record_tracks_ocr_handoff_fields():
     record = DownloadRecord(
         sync_id="sync-001",
+        market="a_share",
+        exchange="sse",
         company_name="华电新能",
         announcement_id="1224131325",
         announcement_title="华电新能首次公开发行股票并在主板上市招股说明书",
@@ -59,6 +61,8 @@ def test_download_record_tracks_ocr_handoff_fields():
     )
 
     assert record.ocr_status == "ocr_not_started"
+    assert record.market == "a_share"
+    assert record.exchange == "sse"
     assert Path(record.local_pdf_path).suffix.lower() == ".pdf"
 
 

@@ -37,7 +37,7 @@ class FilterResult(BaseModel):
     score: int = 0
     matched_rules: list[str] = Field(default_factory=list)
     matched_terms: list[str] = Field(default_factory=list)
-    reason: str
+    reason: str = ""
 
     @model_validator(mode="after")
     def validate_reason(self) -> "FilterResult":
@@ -48,6 +48,8 @@ class FilterResult(BaseModel):
 
 class DownloadRecord(BaseModel):
     sync_id: str
+    market: str
+    exchange: str
     company_name: str
     announcement_id: str
     announcement_title: str
