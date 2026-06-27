@@ -9,6 +9,7 @@ from ipo_evidence.ingest import company_name_from_filename, doc_id_for_file
 from ipo_evidence.io import ensure_dir, read_json, write_json, write_jsonl, write_text
 from ipo_evidence.models import EvidencePacket, Manifest, QualityStatus
 from ipo_evidence.parser import create_parser
+from ipo_evidence.reader_bundle import build_reader_bundle
 from ipo_evidence.report_inputs import build_report_inputs
 from ipo_evidence.report_generator import generate_report
 from ipo_evidence.section_mapper import assign_section_paths, build_source_ast, map_canonical_sections
@@ -34,6 +35,7 @@ def _write_report_artifacts(
 ) -> None:
     report = generate_report(manifest.company_name, packet, report_inputs)
     citations = build_citations(packet)
+    reader_bundle = build_reader_bundle(manifest, report, citations, packet)
     web_index = build_web_index(manifest)
 
     write_text(package_dir / "report.md", report)
@@ -41,6 +43,7 @@ def _write_report_artifacts(
         package_dir / "citation.json",
         [citation.model_dump(mode="json") for citation in citations],
     )
+    write_json(package_dir / "reader_bundle.json", reader_bundle)
     write_json(package_dir / "web_index.json", web_index)
 
 

@@ -1,149 +1,148 @@
 import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { afterEach, vi } from "vitest";
 import App from "../App";
 
-vi.mock("../lib/data", () => ({
-  documents: [
-    {
-      id: "doc_test",
-      companyName: "测试股份有限公司",
-      exchange: "A股招股说明书",
-      reportTitle: "测试股份有限公司招股书解读",
-      reportDate: "本地文档包",
-      quality: "safe_to_use",
-      sourceMarkdown: "# 原文",
-      citations: [
-        {
-          id: "C-001",
-          label: "产品收入结构表",
-          summary: "产品收入结构表显示：智能控制器收入 12000 万元，占比 45.2%。",
-          quality: "safe_to_use",
-          excerpt: "产品收入结构表",
-          location: {
-            source_file: "测试股份有限公司招股说明书.pdf",
-            page_number: 3,
-            block_id: "table:T-001",
-            section_path: "业务和技术",
-            table_id: "T-001",
-            table_title: "产品收入结构表",
-            field_value: "智能控制器 / 12000万元 / 45.2%"
-          }
-        }
-      ],
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("reader app", () => {
+  test("renders a continuous article and opens citations in a drawer", async () => {
+    const user = userEvent.setup();
+    const docsIndex = [
+      {
+        doc_id: "doc_test",
+        company_name: "测试股份有限公司",
+        source_file: "测试股份有限公司招股说明书.pdf",
+        quality_status: "safe_to_use",
+        parse_status: "parsed",
+        report_status: "reported",
+        tags: [],
+        report_path: "report.md",
+        citation_path: "citation.json",
+        reader_bundle_path: "doc_test/reader_bundle.json"
+      }
+    ];
+    const readerBundle = {
+      doc_id: "doc_test",
+      company_name: "测试股份有限公司",
+      source_file: "测试股份有限公司招股说明书.pdf",
+      report_title: "测试股份有限公司招股书长篇阅读",
+      quality_status: "safe_to_use",
+      parse_status: "parsed",
+      report_status: "reported",
       sections: [
         {
-          id: "section-1",
-          title: "处理结论",
+          id: "section-001",
+          title: "总览",
           blocks: [
             {
-              id: "block-1",
-              kind: "finding",
-              title: "处理结论",
-              body: "当前报告由本地证据包生成，适合进行第一轮人工复核。",
-              citationIds: []
+              id: "section-001-block-001",
+              kind: "lead",
+              body: "导语判断，适合作为总览入口。",
+              citation_ids: ["C-001"]
             }
           ]
         },
         {
-          id: "section-2",
-          title: "关于公司",
+          id: "section-002",
+          title: "一、业务概况",
           blocks: [
             {
-              id: "block-2",
+              id: "section-002-block-001",
               kind: "finding",
-              title: "关于公司",
-              body: "产品收入结构表显示：智能控制器收入 12000 万元，占比 45.2%。",
-              citationIds: ["C-001"]
+              body: "公司主营业务集中在智能控制器。",
+              citation_ids: ["C-002"]
             }
           ]
         }
-      ]
-    }
-  ],
-  getDocumentById: (documentId: string) => ({
-    id: "doc_test",
-    companyName: "测试股份有限公司",
-    exchange: "A股招股说明书",
-    reportTitle: "测试股份有限公司招股书解读",
-    reportDate: "本地文档包",
-    quality: "safe_to_use",
-    sourceMarkdown: "# 原文",
-    citations: [
-      {
-        id: "C-001",
-        label: "产品收入结构表",
-        summary: "产品收入结构表显示：智能控制器收入 12000 万元，占比 45.2%。",
-        quality: "safe_to_use",
-        excerpt: "产品收入结构表",
-        location: {
-          source_file: "测试股份有限公司招股说明书.pdf",
-          page_number: 3,
-          block_id: "table:T-001",
-          section_path: "业务和技术",
-          table_id: "T-001",
-          table_title: "产品收入结构表",
-          field_value: "智能控制器 / 12000万元 / 45.2%"
+      ],
+      citations: [
+        {
+          id: "C-001",
+          label: "发行人基本情况",
+          summary: "导语判断，适合作为总览入口。",
+          quality: "safe_to_use",
+          excerpt: "导语判断，适合作为总览入口。",
+          location: {
+            source_file: "测试股份有限公司招股说明书.pdf",
+            page_number: 2,
+            block_id: "B-000001",
+            section_path: ["发行人基本情况"]
+          }
+        },
+        {
+          id: "C-002",
+          label: "主营业务",
+          summary: "公司主营业务集中在智能控制器。",
+          quality: "manual_review",
+          excerpt: "公司主营业务集中在智能控制器。",
+          location: {
+            source_file: "测试股份有限公司招股说明书.pdf",
+            page_number: 3,
+            block_id: "B-000002",
+            section_path: ["业务和技术", "主营业务"],
+            table_id: null,
+            table_title: null,
+            field_value: null
+          }
         }
-      }
-    ],
-    sections: [
-      {
-        id: "section-1",
-        title: "处理结论",
-        blocks: [
-          {
-            id: "block-1",
-            kind: "finding",
-            title: "处理结论",
-            body: "当前报告由本地证据包生成，适合进行第一轮人工复核。",
-            citationIds: []
-          }
-        ]
-      },
-      {
-        id: "section-2",
-        title: "关于公司",
-        blocks: [
-          {
-            id: "block-2",
-            kind: "finding",
-            title: "关于公司",
-            body: "产品收入结构表显示：智能控制器收入 12000 万元，占比 45.2%。",
-            citationIds: ["C-001"]
-          }
-        ]
-      }
-    ]
-  })
-}));
+      ]
+    };
+    const responses: Record<string, unknown> = {
+      "/index.json": docsIndex,
+      "/doc_test/reader_bundle.json": readerBundle
+    };
 
-describe("reader app", () => {
-  test("renders a focused report reader with quick citation review", async () => {
-    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL | Request) => {
+        const key = typeof input === "string" ? input : String(input);
+        const payload = responses[key];
+
+        if (!payload) {
+          return {
+            ok: false,
+            status: 404,
+            json: async () => ({})
+          } as Response;
+        }
+
+        return {
+          ok: true,
+          status: 200,
+          json: async () => payload
+        } as Response;
+      })
+    );
 
     render(<App />);
-    expect(
-      screen.getByRole("heading", { name: "A股招股书证据阅读台" })
-    ).toBeInTheDocument();
-    expect(screen.getByText("文档")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "处理结论" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "关于公司" })).toBeInTheDocument();
-    expect(screen.getByText("当前报告由本地证据包生成，适合进行第一轮人工复核。")).toBeInTheDocument();
-    await user.click(screen.getByRole("tab", { name: "关于公司" }));
-    expect(
-      screen.getAllByText("产品收入结构表显示：智能控制器收入 12000 万元，占比 45.2%。").length
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByRole("button", { name: /查看引用 C-001/ }).length
-    ).toBeGreaterThan(0);
-    expect(
-      screen.queryByRole("navigation", { name: "报告目录" })
-    ).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /查看引用 C-001/ }));
-    expect(screen.getByText("引用 C-001")).toBeInTheDocument();
-    expect(screen.getByText("招股说明书 第 3 页")).toBeInTheDocument();
-    expect(screen.getByText("source_file")).toBeInTheDocument();
+    expect(await screen.findByText("测试股份有限公司")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("导语判断，适合作为总览入口。").length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("公司主营业务集中在智能控制器。").length
+    ).toBeGreaterThan(0);
+    expect(screen.queryByRole("tab", { name: "一、业务概况" })).not.toBeInTheDocument();
+    expect(screen.queryByText("引用 C-001")).not.toBeInTheDocument();
+
+    const citationChip = screen.getByRole("button", { name: /查看引用 C-002/ });
+    expect(citationChip).toHaveClass("citation-chip");
+
+    await user.click(citationChip);
+
+    const drawer = screen.getByRole("complementary", { name: "引用抽屉" });
+    expect(within(drawer).getByText("引用 C-002")).toBeInTheDocument();
+    expect(within(drawer).getByText("招股说明书 第 3 页")).toBeInTheDocument();
+    expect(within(drawer).getByText("业务和技术 / 主营业务")).toBeInTheDocument();
+    expect(within(drawer).queryByText("null")).not.toBeInTheDocument();
+
+    await user.click(within(drawer).getByRole("button", { name: "关闭引用" }));
+
+    expect(screen.queryByRole("complementary", { name: "引用抽屉" })).not.toBeInTheDocument();
   });
 });

@@ -1,0 +1,91 @@
+version: 1
+
+report_title_suffix: "招股书长篇阅读"
+
+input_views:
+  company_and_industry:
+    title: "公司介绍与行业概况"
+    prompt_slot: "company_and_industry"
+    focus_points:
+      - "主营业务"
+      - "产品体系"
+      - "商业模式"
+      - "行业规模"
+      - "产业链位置"
+      - "增长驱动"
+    constraints:
+      - "事实必须来自 evidence_refs"
+      - "优先使用行业规模、格局、产业链和咨询机构证据"
+    output_order: 1
+    token_budget: 2200
+    source_sections:
+      - "about_company"
+      - "business_and_product"
+      - "financials"
+      - "use_of_proceeds"
+
+  personal_investment:
+    title: "个人投资视角"
+    prompt_slot: "personal_investment"
+    focus_points:
+      - "产品可信度"
+      - "研发投入"
+      - "销售费用"
+      - "增长质量"
+      - "客户结构"
+      - "现金流风险"
+    constraints:
+      - "可以写日常判断，但事实必须可 citation"
+      - "不写估值和荐股结论"
+      - "没有外部风评证据时不编造外部评价"
+    output_order: 2
+    token_budget: 2200
+    source_sections:
+      - "business_and_product"
+      - "financials"
+      - "use_of_proceeds"
+      - "risks"
+      - "governance"
+
+  cognitive_worldview:
+    title: "认知世界的方式"
+    prompt_slot: "cognitive_worldview"
+    focus_points:
+      - "如何拆解行业"
+      - "企业如何证明竞争力"
+      - "产品、渠道、研发、客户、风险如何互相影响"
+      - "证据如何限制判断"
+    constraints:
+      - "写认知收获，不写系统评估"
+      - "所有例子必须能回到 evidence_refs"
+    output_order: 3
+    token_budget: 2200
+    source_sections:
+      - "about_company"
+      - "business_and_product"
+      - "financials"
+      - "use_of_proceeds"
+      - "risks"
+
+writing_prompt:
+  role: "你是一名写给个人读者的 IPO 招股书长篇解读作者。"
+  objective: "把 evidence_packet 与 report_inputs 组织成一篇接近成品的、可阅读的弱结构化长文。"
+  style:
+    - "不要写传统研报腔，不堆目录式小标题。"
+    - "不要写系统测试、input 层、report 层、生成器等内部工程词。"
+    - "不要反复使用“这家公司”；默认读者已经知道报告对象。"
+    - "句子要像写给真人阅读，而不是像流程说明。"
+    - "可以有判断和解释，但核心事实必须带 citation。"
+  required_views:
+    - "公司介绍与行业概况：说明它做什么、产品进入哪些场景、产业链位置在哪里。"
+    - "个人投资视角：说明产品是否可信、收入和研发是否支撑成长、风险是否改变故事。"
+    - "认知世界的方式：把这家公司当作观察 AI 进入现实产业的样本，抽象出阅读方法。"
+  citation_rule:
+    - "报告中引用 [C-001]、[C-002] 这类编号。"
+    - "citation 编号按照 evidence_packet.items 的原始顺序生成。"
+    - "没有来源定位的事实不得进入最终报告。"
+  evidence_selection_rule:
+    - "先按 report_inputs.section_groups[].evidence_refs 取证据。"
+    - "再按 canonical_section 补充同类证据，避免 input 不完整时报告断掉。"
+    - "产品、客户、竞争力段落优先使用 text_quote，减少表格行直接污染正文。"
+    - "财务、收入结构、费用、风险段落可以使用 table_fact。"

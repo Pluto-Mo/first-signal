@@ -1,12 +1,11 @@
 import { MapPinned } from "lucide-react";
-import type { Citation } from "../lib/types";
+import type { ReaderCitation } from "../lib/types";
 
 interface SourceViewProps {
-  citation: Citation;
-  sourceMarkdown: string;
+  citation: ReaderCitation;
 }
 
-const orderedFields: Array<keyof Citation["location"]> = [
+const orderedFields: Array<keyof ReaderCitation["location"]> = [
   "source_file",
   "page_number",
   "block_id",
@@ -16,7 +15,7 @@ const orderedFields: Array<keyof Citation["location"]> = [
   "field_value"
 ];
 
-export function SourceView({ citation, sourceMarkdown }: SourceViewProps) {
+export function SourceView({ citation }: SourceViewProps) {
   return (
     <section className="source-view" aria-labelledby="source-view-title">
       <div className="panel-header">
@@ -31,16 +30,21 @@ export function SourceView({ citation, sourceMarkdown }: SourceViewProps) {
 
       <dl className="source-grid">
         {orderedFields
-          .filter((field) => citation.location[field] !== undefined)
+          .filter((field) => {
+            const value = citation.location[field];
+            return value !== undefined && value !== null;
+          })
           .map((field) => (
             <div key={field} className="source-row">
               <dt>{field}</dt>
-              <dd>{String(citation.location[field])}</dd>
+              <dd>
+                {field === "section_path"
+                  ? citation.location.section_path.join(" / ")
+                  : String(citation.location[field])}
+              </dd>
             </div>
           ))}
       </dl>
-
-      <pre className="source-markdown-preview">{sourceMarkdown}</pre>
     </section>
   );
 }

@@ -1,9 +1,9 @@
 import { FileText } from "lucide-react";
-import type { DocumentRecord } from "../lib/types";
+import type { DocsIndexItem } from "../lib/types";
 
 interface DocumentListProps {
-  documents: DocumentRecord[];
-  selectedDocumentId: string;
+  documents: DocsIndexItem[];
+  selectedDocumentId: string | null;
   onSelect: (documentId: string) => void;
 }
 
@@ -20,23 +20,23 @@ export function DocumentList({
       </div>
       <div className="document-items" role="list">
         {documents.map((document) => {
-          const isSelected = document.id === selectedDocumentId;
+          const isSelected = document.doc_id === selectedDocumentId;
 
           return (
             <button
-              key={document.id}
+              key={document.doc_id}
               type="button"
               className={`document-card${isSelected ? " is-selected" : ""}`}
-              onClick={() => onSelect(document.id)}
+              onClick={() => onSelect(document.doc_id)}
               aria-pressed={isSelected}
             >
               <span className="document-card-icon" aria-hidden="true">
                 <FileText size={16} />
               </span>
               <span className="document-card-body">
-                <span className="document-card-title">{document.companyName}</span>
+                <span className="document-card-title">{document.company_name}</span>
                 <span className="document-card-meta">
-                  {document.exchange} · {document.reportDate}
+                  {document.parse_status} · {document.quality_status}
                 </span>
               </span>
             </button>

@@ -4,6 +4,7 @@ from collections import defaultdict
 from typing import Any
 
 from ipo_evidence.models import EvidenceItem, EvidencePacket
+from ipo_evidence.report_inputs import load_report_prompt_config
 
 
 SECTION_ORDER = [
@@ -132,6 +133,26 @@ def _input_group_map(report_inputs: dict[str, Any] | None) -> dict[str, dict[str
         for group in _section_groups_from_inputs(report_inputs)
         if isinstance(group.get("section_key"), str)
     }
+
+
+def _prompt_config() -> dict[str, Any]:
+    return load_report_prompt_config()
+
+
+def _report_title(company_name: str) -> str:
+    suffix = _prompt_config().get("report_title_suffix", "招股书长篇阅读")
+    return f"# {company_name}{suffix}"
+
+
+def _view_title(section_key: str, fallback: str) -> str:
+    views = _prompt_config().get("input_views", {})
+    if not isinstance(views, dict):
+        return fallback
+    view = views.get(section_key, {})
+    if not isinstance(view, dict):
+        return fallback
+    title = view.get("title")
+    return title if isinstance(title, str) and title else fallback
 
 
 def _items_for_input_group(
@@ -422,7 +443,7 @@ def _report_body(
     )
 
     lines = [
-        f"# {company_name}招股书长篇阅读",
+        _report_title(company_name),
         "",
         (
             "读这份招股书，最有价值的入口不是先给出一个估值判断，而是把一个“对话式人工智能”公司拆成几个能被验证的问题："
@@ -430,7 +451,7 @@ def _report_body(
             f"{identity}"
         ),
         "",
-        "## 一、公司介绍与行业概况",
+        f"## 一、{_view_title('company_and_industry', '公司介绍与行业概况')}",
         "",
         (
             "先看业务边界。"
@@ -468,7 +489,7 @@ def _report_body(
             "端侧部署、离线可用、低时延、隐私保护、多芯片适配这些能力，只有和客户场景绑定后才有商业意义。换句话说，技术壁垒不是写在技术名词里，而是写在客户迁移成本和交付稳定性里。"
         ),
         "",
-        "## 二、个人投资视角",
+        f"## 二、{_view_title('personal_investment', '个人投资视角')}",
         "",
         (
             "从个人投资者或产品使用者的角度，第一件事不是问“AI 赛道能不能涨”，而是问产品是否值得信任。"
@@ -506,7 +527,7 @@ def _report_body(
             "这些风险让这份材料不能被读成单纯的 AI 成长叙事。更合理的阶段性判断是：产品和行业线索值得继续跟踪，但盈利质量、现金流改善、客户分散度和研发转化效率还需要后续持续验证。"
         ),
         "",
-        "## 三、认知世界的方式",
+        f"## 三、{_view_title('cognitive_worldview', '认知世界的方式')}",
         "",
         (
             "这份招股书真正有意思的地方，是它示范了一个行业如何被拆开。第一步不是问“人工智能是不是未来”，而是问技术通过什么入口进入物理世界。"

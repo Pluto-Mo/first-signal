@@ -1,46 +1,59 @@
 export type QualityStatus = "safe_to_use" | "manual_review" | "do_not_use";
 
-export interface CitationLocation {
+export interface DocsIndexItem {
+  doc_id: string;
+  company_name: string;
   source_file: string;
-  page_number: number;
-  block_id: string;
-  section_path: string;
-  table_id?: string;
-  table_title?: string;
-  field_value?: string;
+  quality_status: QualityStatus;
+  parse_status: string;
+  report_status: string;
+  tags: string[];
+  report_path: string;
+  citation_path: string;
+  reader_bundle_path: string;
 }
 
-export interface Citation {
+export interface ReaderCitationLocation {
+  source_file: string;
+  page_number: number;
+  section_path: string[];
+  block_id?: string | null;
+  table_id?: string | null;
+  table_title?: string | null;
+  field_value?: string | null;
+}
+
+export interface ReaderCitation {
   id: string;
   label: string;
   summary: string;
   quality: QualityStatus;
   excerpt: string;
-  location: CitationLocation;
+  location: ReaderCitationLocation;
 }
 
-export interface ReportBlock {
+export interface ReaderBlock {
   id: string;
   kind: "lead" | "finding" | "note";
   title?: string;
   body: string;
-  citationIds: string[];
+  citation_ids: string[];
 }
 
-export interface ReportSection {
+export interface ReaderSection {
   id: string;
   title: string;
-  blocks: ReportBlock[];
+  blocks: ReaderBlock[];
 }
 
-export interface DocumentRecord {
-  id: string;
-  companyName: string;
-  exchange: string;
-  reportTitle: string;
-  reportDate: string;
-  quality: QualityStatus;
-  sections: ReportSection[];
-  citations: Citation[];
-  sourceMarkdown: string;
+export interface ReaderBundle {
+  doc_id: string;
+  company_name: string;
+  source_file: string;
+  report_title: string;
+  quality_status: QualityStatus;
+  parse_status: string;
+  report_status: string;
+  sections: ReaderSection[];
+  citations: ReaderCitation[];
 }

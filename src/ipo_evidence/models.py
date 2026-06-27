@@ -122,6 +122,52 @@ class WebIndex(BaseModel):
     tags: list[str] = Field(default_factory=list)
     report_path: str = "report.md"
     citation_path: str = "citation.json"
+    reader_bundle_path: str = "reader_bundle.json"
+
+
+class ReaderCitationLocation(BaseModel):
+    source_file: str
+    page_number: int
+    section_path: list[str]
+    block_id: str | None = None
+    table_id: str | None = None
+    table_title: str | None = None
+    field_value: str | None = None
+
+
+class ReaderCitation(BaseModel):
+    id: str
+    label: str
+    summary: str
+    quality: QualityStatus
+    excerpt: str
+    location: ReaderCitationLocation
+
+
+class ReaderBlock(BaseModel):
+    id: str
+    kind: Literal["lead", "finding", "note"]
+    title: str | None = None
+    body: str
+    citation_ids: list[str] = Field(default_factory=list)
+
+
+class ReaderSection(BaseModel):
+    id: str
+    title: str
+    blocks: list[ReaderBlock] = Field(default_factory=list)
+
+
+class ReaderBundle(BaseModel):
+    doc_id: str
+    company_name: str
+    source_file: str
+    report_title: str
+    quality_status: QualityStatus
+    parse_status: str
+    report_status: str
+    sections: list[ReaderSection] = Field(default_factory=list)
+    citations: list[ReaderCitation] = Field(default_factory=list)
 
 
 JsonDict = dict[str, Any]

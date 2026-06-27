@@ -1,11 +1,11 @@
 import { BookMarked, ShieldAlert, ShieldCheck, ShieldX } from "lucide-react";
-import type { Citation } from "../lib/types";
+import type { ReaderCitation } from "../lib/types";
 
 interface CitationPanelProps {
-  citation: Citation;
+  citation: ReaderCitation;
 }
 
-function qualityIcon(quality: Citation["quality"]) {
+function qualityIcon(quality: ReaderCitation["quality"]) {
   if (quality === "safe_to_use") {
     return <ShieldCheck size={16} />;
   }
@@ -17,7 +17,7 @@ function qualityIcon(quality: Citation["quality"]) {
   return <ShieldX size={16} />;
 }
 
-function qualityLabel(quality: Citation["quality"]) {
+function qualityLabel(quality: ReaderCitation["quality"]) {
   if (quality === "safe_to_use") {
     return "safe_to_use";
   }
@@ -31,7 +31,7 @@ function qualityLabel(quality: Citation["quality"]) {
 
 export function CitationPanel({ citation }: CitationPanelProps) {
   return (
-    <aside className="citation-panel" aria-labelledby="citation-panel-title">
+    <section className="citation-panel" aria-labelledby="citation-panel-title">
       <div className="panel-header">
         <p className="eyebrow">引用</p>
         <h2 id="citation-panel-title">引用 {citation.id}</h2>
@@ -51,6 +51,6 @@ export function CitationPanel({ citation }: CitationPanelProps) {
       </div>
 
       <blockquote className="citation-excerpt">{citation.excerpt}</blockquote>
-    </aside>
+    </section>
   );
 }

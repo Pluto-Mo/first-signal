@@ -23,6 +23,12 @@ def refresh_docs_index(docs_root: Path) -> list[dict]:
     for web_index_path in sorted(docs_root.glob("*/web_index.json")):
         payload = read_json(web_index_path)
         if isinstance(payload, dict):
+            doc_id = payload.get("doc_id")
+            if isinstance(doc_id, str) and doc_id:
+                for path_key in ("report_path", "citation_path", "reader_bundle_path"):
+                    path_value = payload.get(path_key)
+                    if isinstance(path_value, str) and path_value and "/" not in path_value:
+                        payload[path_key] = f"{doc_id}/{path_value}"
             items.append(payload)
     write_json(docs_root / "index.json", items)
     return items
