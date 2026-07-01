@@ -78,6 +78,18 @@ def test_assemble_report_returns_citation_free_fallback_when_nothing_qualifies()
     assert "[C-" not in report
 
 
+def test_assemble_report_returns_fallback_when_cleanup_removes_all_sections():
+    report = assemble_report(
+        "测试股份有限公司",
+        [_draft("first", "第一节", "section draft\n\ninternal trace")],
+        [_decision("first", "include")],
+        valid_citation_ids=set(),
+    )
+
+    assert "本次材料未形成满足证据阈值的正式解读正文。" in report
+    assert "## 第一节" not in report
+
+
 def test_assemble_report_rejects_unknown_citation_ids():
     with pytest.raises(ValueError, match="unknown citation id"):
         assemble_report(
@@ -86,3 +98,29 @@ def test_assemble_report_rejects_unknown_citation_ids():
             [_decision("first", "include")],
             valid_citation_ids={"C-001"},
         )
+
+
+def test_assemble_report_removes_duplicate_adjacent_paragraphs():
+    duplicated = "同一段判断。[C-001]\n\n同一段判断。[C-001]"
+
+    report = assemble_report(
+        "测试股份有限公司",
+        [_draft("first", "第一节", duplicated)],
+        [_decision("first", "include")],
+        valid_citation_ids={"C-001"},
+    )
+
+    assert report.count("同一段判断。[C-001]") == 1
+
+
+def test_assemble_report_removes_internal_system_terms():
+    report = assemble_report(
+        "测试股份有限公司",
+        [_draft("first", "第一节", "该段来自 section draft 和 internal trace。[C-001]")],
+        [_decision("first", "include")],
+        valid_citation_ids={"C-001"},
+    )
+
+    assert "section draft" not in report
+    assert "internal trace" not in report
+    assert "[C-001]" in report
