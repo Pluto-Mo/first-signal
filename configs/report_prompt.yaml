@@ -18,6 +18,22 @@ input_views:
       - "优先使用行业规模、格局、产业链和咨询机构证据"
     output_order: 1
     token_budget: 2200
+    skill_refs:
+      - "business_goal_decompose"
+      - "capability_match"
+      - "reader_value_translate"
+    evidence_policy:
+      min_fact_count: 2
+      min_strength: "medium"
+      weak_evidence: "merge_into_related_section"
+      no_evidence: "log_only"
+    output_contract:
+      shape: "narrative_section"
+      requires:
+        - "core_claim"
+        - "evidence_chain"
+        - "reader_value"
+    section_role: "main"
     source_sections:
       - "about_company"
       - "business_and_product"
@@ -40,6 +56,22 @@ input_views:
       - "没有外部风评证据时不编造外部评价"
     output_order: 2
     token_budget: 2200
+    skill_refs:
+      - "business_goal_decompose"
+      - "capability_match"
+      - "reader_value_translate"
+    evidence_policy:
+      min_fact_count: 2
+      min_strength: "medium"
+      weak_evidence: "merge_into_related_section"
+      no_evidence: "log_only"
+    output_contract:
+      shape: "narrative_section"
+      requires:
+        - "core_claim"
+        - "evidence_chain"
+        - "reader_value"
+    section_role: "main"
     source_sections:
       - "business_and_product"
       - "financials"
@@ -60,6 +92,21 @@ input_views:
       - "所有例子必须能回到 evidence_refs"
     output_order: 3
     token_budget: 2200
+    skill_refs:
+      - "reader_value_translate"
+      - "tension_expand"
+    evidence_policy:
+      min_fact_count: 2
+      min_strength: "medium"
+      weak_evidence: "merge_into_related_section"
+      no_evidence: "log_only"
+    output_contract:
+      shape: "narrative_section"
+      requires:
+        - "core_claim"
+        - "evidence_chain"
+        - "reader_value"
+    section_role: "main"
     source_sections:
       - "about_company"
       - "business_and_product"

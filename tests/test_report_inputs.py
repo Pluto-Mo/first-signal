@@ -94,3 +94,39 @@ def test_build_report_inputs_uses_evidence_refs_not_evidence_copies():
         "label": "发行人基本情况",
     }
     assert "evidence_ids" not in report_inputs["section_groups"][0]
+
+
+def test_build_report_inputs_adds_architecture_dispatch_contract():
+    packet = build_evidence_packet(
+        doc_id="doc_test",
+        source_file="测试股份有限公司招股说明书.pdf",
+        blocks=[
+            Block(
+                block_id="B-000002",
+                page_number=2,
+                text="公司主要从事智能硬件产品的研发、生产和销售。",
+                section_path=["发行人基本情况"],
+            )
+        ],
+        tables=[],
+    )
+
+    report_inputs = build_report_inputs("doc_test", "测试股份有限公司", packet)
+    section = report_inputs["section_groups"][0]
+
+    assert section["skill_refs"] == [
+        "business_goal_decompose",
+        "capability_match",
+        "reader_value_translate",
+    ]
+    assert section["evidence_policy"] == {
+        "min_fact_count": 2,
+        "min_strength": "medium",
+        "weak_evidence": "merge_into_related_section",
+        "no_evidence": "log_only",
+    }
+    assert section["output_contract"] == {
+        "shape": "narrative_section",
+        "requires": ["core_claim", "evidence_chain", "reader_value"],
+    }
+    assert section["section_role"] == "main"

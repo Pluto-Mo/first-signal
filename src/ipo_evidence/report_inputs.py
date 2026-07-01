@@ -6,6 +6,19 @@ from typing import Any
 from ipo_evidence.config import load_yaml
 
 
+DEFAULT_EVIDENCE_POLICY = {
+    "min_fact_count": 2,
+    "min_strength": "medium",
+    "weak_evidence": "merge_into_related_section",
+    "no_evidence": "log_only",
+}
+
+DEFAULT_OUTPUT_CONTRACT = {
+    "shape": "narrative_section",
+    "requires": ["core_claim", "evidence_chain", "reader_value"],
+}
+
+
 @lru_cache(maxsize=1)
 def load_report_prompt_config() -> dict[str, Any]:
     return load_yaml("configs/report_prompt.yaml")
@@ -26,6 +39,18 @@ def _build_evidence_ref(evidence_id: str, section_path: list[str], rank: int) ->
         "rank": rank,
         "label": section_path[-1] if section_path else None,
     }
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str) and item]
+
+
+def _dict_value(value: Any, fallback: dict[str, Any]) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    return fallback.copy()
 
 
 def build_report_inputs(doc_id: str, company_name: str, packet) -> dict:
@@ -52,6 +77,14 @@ def build_report_inputs(doc_id: str, company_name: str, packet) -> dict:
                 "constraints": template["constraints"],
                 "output_order": template["output_order"],
                 "token_budget": template["token_budget"],
+                "skill_refs": _string_list(template.get("skill_refs")),
+                "evidence_policy": _dict_value(
+                    template.get("evidence_policy"), DEFAULT_EVIDENCE_POLICY
+                ),
+                "output_contract": _dict_value(
+                    template.get("output_contract"), DEFAULT_OUTPUT_CONTRACT
+                ),
+                "section_role": template.get("section_role", "main"),
                 "evidence_refs": refs,
             }
         )
