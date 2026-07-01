@@ -1,0 +1,8 @@
+skill_key: "tension_expand"
+title: "矛盾张力展开"
+action: "把增长、投入、现金流、风险之间的张力讲清楚。"
+requires:
+  - "core_claim"
+  - "evidence_chain"
+produces:
+  - "tension_summary"

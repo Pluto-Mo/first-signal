@@ -1,0 +1,12 @@
+profile_key: "consumer_product"
+title: "消费产品公司解读"
+extends: "base"
+attention_fields:
+  - "产品定位"
+  - "价格带"
+  - "渠道结构"
+  - "平台依赖"
+  - "销售费用"
+  - "用户口碑"
+  - "售后服务"
+  - "供应链"

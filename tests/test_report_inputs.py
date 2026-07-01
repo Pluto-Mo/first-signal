@@ -1,3 +1,4 @@
+from ipo_evidence.config import load_yaml
 from ipo_evidence.evidence import build_evidence_packet
 from ipo_evidence.models import Block
 from ipo_evidence.report_inputs import build_report_inputs
@@ -233,3 +234,25 @@ def test_build_report_inputs_defensively_handles_dispatch_contract(monkeypatch):
     }
     assert fallback_section["section_role"] == "main"
     assert configured_section["section_role"] == "supporting"
+
+
+def test_architecture_config_files_are_loadable():
+    paths = [
+        "configs/report_profiles/base.yaml",
+        "configs/report_profiles/technology_company.yaml",
+        "configs/report_profiles/consumer_product.yaml",
+        "configs/report_profiles/cyclical_industry.yaml",
+        "configs/skills/business_goal_decompose.yaml",
+        "configs/skills/capability_match.yaml",
+        "configs/skills/disclosure_gap_scan.yaml",
+        "configs/skills/reader_value_translate.yaml",
+        "configs/skills/tension_expand.yaml",
+        "configs/prompts/section_writer.yaml",
+        "configs/prompts/stitch_writer.yaml",
+        "configs/prompts/citation_checker.yaml",
+    ]
+
+    for path in paths:
+        config = load_yaml(path)
+        assert isinstance(config, dict)
+        assert config

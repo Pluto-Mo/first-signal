@@ -1,0 +1,10 @@
+profile_key: "cyclical_industry"
+title: "周期行业公司解读"
+extends: "base"
+attention_fields:
+  - "产能"
+  - "价格周期"
+  - "原材料成本"
+  - "库存"
+  - "资本开支"
+  - "行业供需"

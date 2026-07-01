@@ -1,0 +1,6 @@
+prompt_slot: "narrative_section"
+purpose: "把一个 section draft 写成自然正文。"
+rules:
+  - "只使用 evidence_refs 对应证据。"
+  - "事实句必须带 citation id。"
+  - "不写内部系统词。"

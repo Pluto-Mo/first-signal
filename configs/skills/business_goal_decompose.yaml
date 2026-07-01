@@ -1,0 +1,7 @@
+skill_key: "business_goal_decompose"
+title: "业务目标拆解"
+action: "把披露事实拆成产品、客户、收入和资源配置问题。"
+requires:
+  - "core_claim"
+produces:
+  - "business_question"

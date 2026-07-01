@@ -1,0 +1,7 @@
+skill_key: "disclosure_gap_scan"
+title: "披露缺口识别"
+action: "识别当前证据无法支撑的判断，并记录需要补充的证据。"
+requires:
+  - "evidence_chain"
+produces:
+  - "gap_note"

@@ -1,0 +1,6 @@
+prompt_slot: "stitch_writer"
+purpose: "整合合格 section drafts，处理排序、去重和过渡。"
+rules:
+  - "不新增事实。"
+  - "不改变 citation id。"
+  - "删除低完成度内容。"
