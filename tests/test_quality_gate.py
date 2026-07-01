@@ -118,6 +118,23 @@ def test_quality_gate_defaults_invalid_min_strength_to_medium():
     assert decisions[0].reason == "有效证据数量 1 达到最低要求 1。"
 
 
+def test_quality_gate_defaults_non_string_min_strength_to_medium():
+    draft = _draft(
+        "platform_dependency",
+        2,
+        [QualityStatus.manual_review, QualityStatus.do_not_use],
+    )
+
+    decisions = apply_quality_gate(
+        [draft],
+        {"platform_dependency": {"min_fact_count": 1, "min_strength": ["high"]}},
+    )
+
+    assert decisions[0].section_key == "platform_dependency"
+    assert decisions[0].action == "include"
+    assert decisions[0].reason == "有效证据数量 1 达到最低要求 1。"
+
+
 def test_quality_gate_includes_section_when_fact_count_meets_minimum():
     draft = _draft("business_model", 2)
 

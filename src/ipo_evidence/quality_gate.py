@@ -34,7 +34,7 @@ def _action_for_weak(policy: dict[str, Any]) -> Literal["merge", "log_only"]:
 
 def _min_strength(policy: dict[str, Any]) -> EvidenceStrength:
     value = policy.get("min_strength", "medium")
-    if value in _STRENGTH_RANK:
+    if isinstance(value, str) and value in _STRENGTH_RANK:
         return value
     return "medium"
 
