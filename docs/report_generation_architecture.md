@@ -92,9 +92,9 @@ flowchart LR
   F3 --> G
   F4 --> G
 
+  C --> J["引用文件<br/>citation.json"]
   G --> H["stitch 层<br/>排序 / 去重 / 过渡 / 统一语气"]
   H --> I["最终报告<br/>report.md"]
-  H --> J["引用文件<br/>citation.json"]
   G --> K["内部日志<br/>analysis_log.json / quality_notes.md"]
 
   I --> L["阅读器<br/>reader_bundle.json / web_index.json"]
@@ -123,10 +123,12 @@ flowchart LR
 evidence_packet -> citation
 report_inputs -> evidence_refs
 section_generator -> skill_refs
-report.md -> citation.json
+report.md -> citation ids
 ```
 
 这些耦合用于保证“口出有凭”。最终报告中的事实必须能回到 `EvidenceItem`，citation 必须能回到页码、block、table 或字段。
+
+`citation.json` 应继续由 `evidence_packet` 派生，并保持 citation 编号与 evidence 原始顺序一致。section generator 和 stitcher 只能消费、引用或校验 citation，不能重新生成事实定位，也不能改变 citation 编号。
 
 ### 4.2 弱耦合
 
