@@ -163,6 +163,15 @@ def test_build_report_inputs_defensively_handles_dispatch_contract(monkeypatch):
             "section_role": "supporting",
             "source_sections": [],
         },
+        "missing_view": {
+            "title": "Missing View",
+            "prompt_slot": "missing_view",
+            "focus_points": [],
+            "constraints": [],
+            "output_order": 3,
+            "token_budget": 100,
+            "source_sections": [],
+        },
     }
     monkeypatch.setattr(
         "ipo_evidence.report_inputs._input_view_templates", lambda: templates
@@ -177,6 +186,7 @@ def test_build_report_inputs_defensively_handles_dispatch_contract(monkeypatch):
     report_inputs = build_report_inputs("doc_test", "测试股份有限公司", packet)
     fallback_section = report_inputs["section_groups"][0]
     configured_section = report_inputs["section_groups"][1]
+    missing_section = report_inputs["section_groups"][2]
 
     assert fallback_section["skill_refs"] == ["reader_value_translate"]
     assert fallback_section["evidence_policy"] == {
@@ -195,6 +205,18 @@ def test_build_report_inputs_defensively_handles_dispatch_contract(monkeypatch):
         "shape": "custom_section",
         "requires": ["custom_claim"],
     }
+    assert missing_section["skill_refs"] == []
+    assert missing_section["evidence_policy"] == {
+        "min_fact_count": 2,
+        "min_strength": "medium",
+        "weak_evidence": "merge_into_related_section",
+        "no_evidence": "log_only",
+    }
+    assert missing_section["output_contract"] == {
+        "shape": "narrative_section",
+        "requires": ["core_claim", "evidence_chain", "reader_value"],
+    }
+    assert missing_section["section_role"] == "main"
 
     fallback_section["output_contract"]["requires"].append("mutated_fallback")
     configured_section["output_contract"]["requires"].append("mutated_config")
