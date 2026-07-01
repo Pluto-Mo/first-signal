@@ -189,4 +189,24 @@ class SectionDraft(BaseModel):
     internal_trace: InternalTrace
 
 
+class QualityGateDecision(BaseModel):
+    section_key: str
+    action: Literal["include", "merge", "log_only"]
+    reason: str
+    needed_evidence: list[str] = Field(default_factory=list)
+    suggested_next_step: str | None = None
+
+
+class AnalysisLogEntry(BaseModel):
+    section_key: str
+    reason: str
+    needed_evidence: list[str] = Field(default_factory=list)
+    suggested_next_step: str | None = None
+
+
+class AnalysisLog(BaseModel):
+    doc_id: str
+    skipped_or_merged: list[AnalysisLogEntry] = Field(default_factory=list)
+
+
 JsonDict = dict[str, Any]
