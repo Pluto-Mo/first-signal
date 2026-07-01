@@ -1,85 +1,155 @@
-version: 1
+version: 2
 
 report_title_suffix: "招股书长篇阅读"
 
+reading_method:
+  name: "first_signal_prospectus_method"
+  summary: "从一个异常现象或第一信号进入招股书，再用证据验证能力结构、资源配置、披露边界和读者价值。"
+  reasoning_chain:
+    - "第一信号 = 产品表现、渠道动作、增长叙事或披露空白中出现的不协调现象。"
+    - "招股书证据 = 业务描述、产品场景、研发人员、费用投入、客户渠道、募投项目和风险因素。"
+    - "可用结论 = 能力与目标匹配程度、后续核查重点、不同读者的行动含义。"
+  evidence_disciplines:
+    - "事实判断必须来自 evidence_refs 或 canonical_section。"
+    - "披露缺口只能写成待核查信号，不能写成已经发生的事实。"
+    - "结论必须区分事实、推断和读者可用结论。"
+    - "消费建议、职业机会和投资判断必须落在证据能够支撑的范围内。"
+  reader_roles:
+    - "投资人：寻找增长叙事、能力约束、现金流压力和风险因素。"
+    - "行业从业者：寻找渠道、客户、产品组合、费用结构和业务指标的参照。"
+    - "技术或产品人：寻找能力缺口、团队储备和募投方向中的职业机会。"
+    - "普通消费者：寻找产品可信度、交付风险和继续观望的理由。"
+
+skill_modules:
+  signal_detection:
+    definition: "把外部现象、产品争议、渠道动作、增长叙事或披露空白转化为一个可验证问题。"
+    operating_questions:
+      - "这个信号指向产品、渠道、技术、组织还是财务？"
+      - "招股书里哪一类证据能验证这个信号？"
+      - "证据缺失时，它是披露边界还是后续核查任务？"
+  capability_chain:
+    definition: "把产品目标拆成能力要求，再追到团队、研发、客户、渠道、募投和风险。"
+    operating_questions:
+      - "产品要成立，需要哪些硬件、软件、供应链、渠道或服务能力？"
+      - "招股书披露的人员、费用、核心技术和项目投入是否支撑这些能力？"
+      - "客户和收入能否证明能力已经落地？"
+  disclosure_gap_scan:
+    definition: "把重要但缺席的信息标记为待核查信号，并限制表达强度。"
+    operating_questions:
+      - "关键渠道、客户、平台、产品线或风险是否缺席？"
+      - "缺席信息是否影响对收入质量、客户结构或产品可信度的判断？"
+      - "缺席信息能否通过后续公告、店铺数据、产品评价或行业资料补证？"
+  reader_value_map:
+    definition: "把同一组招股书证据翻译给投资人、行业从业者、技术产品人和消费者。"
+    operating_questions:
+      - "投资人应该继续跟踪什么？"
+      - "行业从业者能拿哪些数据做参照？"
+      - "技术或产品人能看到哪些能力缺口？"
+      - "普通消费者能得到什么产品判断？"
+
 input_views:
-  company_and_industry:
-    title: "公司介绍与行业概况"
-    prompt_slot: "company_and_industry"
+  signal_and_question:
+    title: "现象入口与核心问题"
+    prompt_slot: "signal_and_question"
     focus_points:
+      - "第一信号"
       - "主营业务"
-      - "产品体系"
-      - "商业模式"
-      - "行业规模"
-      - "产业链位置"
-      - "增长驱动"
+      - "产品与场景"
+      - "行业趋势"
+      - "需要验证的核心问题"
     constraints:
-      - "事实必须来自 evidence_refs"
-      - "优先使用行业规模、格局、产业链和咨询机构证据"
+      - "没有外部现象证据时，只能用招股书内部信号开篇。"
+      - "核心问题必须能被后续证据验证。"
+      - "行业趋势只能作为问题入口，不能直接推导公司结论。"
     output_order: 1
-    token_budget: 2200
+    token_budget: 1800
+    source_sections:
+      - "about_company"
+      - "business_and_product"
+      - "financials"
+      - "risks"
+
+  business_capability_chain:
+    title: "业务、能力与资源匹配"
+    prompt_slot: "business_capability_chain"
+    focus_points:
+      - "产品目标"
+      - "技术和研发储备"
+      - "人员与组织能力"
+      - "客户和渠道验证"
+      - "募投项目是否补足能力"
+    constraints:
+      - "用能力链组织证据：产品目标 -> 能力要求 -> 资源配置 -> 客户验证 -> 执行约束。"
+      - "不要把研发投入直接写成技术壁垒，必须说明它能否落到产品、客户或交付。"
+      - "硬件、软件、渠道和服务能力要分别识别。"
+    output_order: 2
+    token_budget: 2400
     source_sections:
       - "about_company"
       - "business_and_product"
       - "financials"
       - "use_of_proceeds"
+      - "governance"
 
-  personal_investment:
-    title: "个人投资视角"
-    prompt_slot: "personal_investment"
+  disclosure_gap_and_risk:
+    title: "披露空白与风险约束"
+    prompt_slot: "disclosure_gap_and_risk"
     focus_points:
-      - "产品可信度"
-      - "研发投入"
-      - "销售费用"
-      - "增长质量"
-      - "客户结构"
-      - "现金流风险"
+      - "风险因素"
+      - "现金流和费用压力"
+      - "客户或渠道集中"
+      - "关联交易和治理"
+      - "重要但缺席的信息"
     constraints:
-      - "可以写日常判断，但事实必须可 citation"
-      - "不写估值和荐股结论"
-      - "没有外部风评证据时不编造外部评价"
-    output_order: 2
+      - "披露空白只能作为待核查线索。"
+      - "风险要说明它会影响产品、渠道、现金流、客户关系还是治理。"
+      - "没有证据时保留为核查任务，不补写外部判断。"
+    output_order: 3
     token_budget: 2200
     source_sections:
+      - "financials"
+      - "risks"
+      - "governance"
+      - "related_party"
+      - "business_and_product"
+
+  reader_action_map:
+    title: "不同读者的可用结论"
+    prompt_slot: "reader_action_map"
+    focus_points:
+      - "投资人跟踪重点"
+      - "行业从业者可复用数据"
+      - "技术或产品人的职业机会"
+      - "消费者或用户的产品判断"
+      - "后续核查清单"
+    constraints:
+      - "不同读者结论都必须回到同一组证据。"
+      - "不输出买卖建议、法律意见或审计结论。"
+      - "消费建议需要产品证据支撑。"
+    output_order: 4
+    token_budget: 2000
+    source_sections:
+      - "about_company"
       - "business_and_product"
       - "financials"
       - "use_of_proceeds"
       - "risks"
       - "governance"
 
-  cognitive_worldview:
-    title: "认知世界的方式"
-    prompt_slot: "cognitive_worldview"
-    focus_points:
-      - "如何拆解行业"
-      - "企业如何证明竞争力"
-      - "产品、渠道、研发、客户、风险如何互相影响"
-      - "证据如何限制判断"
-    constraints:
-      - "写认知收获，不写系统评估"
-      - "所有例子必须能回到 evidence_refs"
-    output_order: 3
-    token_budget: 2200
-    source_sections:
-      - "about_company"
-      - "business_and_product"
-      - "financials"
-      - "use_of_proceeds"
-      - "risks"
-
 writing_prompt:
-  role: "你是一名写给个人读者的 IPO 招股书长篇解读作者。"
-  objective: "把 evidence_packet 与 report_inputs 组织成一篇接近成品的、可阅读的弱结构化长文。"
+  role: "你是一名写给个人读者的 IPO 招股书证据型解读作者。"
+  objective: "把 evidence_packet 与 report_inputs 组织成一篇可核查、可迁移、能服务多类读者的弱结构化长文。"
   style:
-    - "不要写传统研报腔，不堆目录式小标题。"
+    - "用第一信号带出问题，再用招股书证据验证。"
+    - "少写传统研报腔，少堆目录式概念。"
     - "不要写系统测试、input 层、report 层、生成器等内部工程词。"
-    - "不要反复使用“这家公司”；默认读者已经知道报告对象。"
-    - "句子要像写给真人阅读，而不是像流程说明。"
     - "可以有判断和解释，但核心事实必须带 citation。"
+    - "披露缺口必须写成待核查信号。"
   required_views:
-    - "公司介绍与行业概况：说明它做什么、产品进入哪些场景、产业链位置在哪里。"
-    - "个人投资视角：说明产品是否可信、收入和研发是否支撑成长、风险是否改变故事。"
-    - "认知世界的方式：把这家公司当作观察 AI 进入现实产业的样本，抽象出阅读方法。"
+    - "现象入口与核心问题：说明第一信号如何收束成可验证问题。"
+    - "业务、能力与资源匹配：说明产品目标、组织能力、研发投入、客户验证和募投方向能否连成能力链。"
+    - "披露空白与风险约束：说明风险和缺席信息如何限制结论强度。"
+    - "不同读者的可用结论：分别给投资人、行业从业者、技术产品人和消费者提炼价值。"
   citation_rule:
     - "报告中引用 [C-001]、[C-002] 这类编号。"
     - "citation 编号按照 evidence_packet.items 的原始顺序生成。"
@@ -87,5 +157,6 @@ writing_prompt:
   evidence_selection_rule:
     - "先按 report_inputs.section_groups[].evidence_refs 取证据。"
     - "再按 canonical_section 补充同类证据，避免 input 不完整时报告断掉。"
-    - "产品、客户、竞争力段落优先使用 text_quote，减少表格行直接污染正文。"
-    - "财务、收入结构、费用、风险段落可以使用 table_fact。"
+    - "产品、客户、竞争力段落优先使用 text_quote。"
+    - "财务、收入结构、费用、募投、风险段落可以使用 table_fact。"
+    - "缺席信息不从表格或正文倒推出事实，只生成核查任务。"
