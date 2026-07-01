@@ -3,6 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ipo_evidence.models import EvidenceItem, QualityStatus
+from ipo_evidence.report_runtime import (
+    PromptConfig,
+    SkillConfig,
+    load_prompt_config,
+    load_skill_configs,
+)
 
 
 MAX_ITEMS_BY_SECTION = {
@@ -87,9 +93,9 @@ def _citation_id(index: int) -> str:
 
 def _clean_text(value: str, limit: int = 160) -> str:
     text = " ".join(value.replace("\u3000", " ").split()).rstrip("。；;，,")
-    for raw in FORBIDDEN_RAW_TEXT:
-        if raw in text:
-            text = text.split(raw, 1)[0].rstrip("。；;，,")
+    if "{'" in text:
+        text = text.split("{'", 1)[0].rstrip("：:。；;，,")
+    text = text.replace("对应数据为：", "为 ").replace("对应数据为", "为")
     if len(text) <= limit:
         return text
     cut = text[:limit]
@@ -204,28 +210,63 @@ def _sentences(items: list[tuple[int, EvidenceItem]], limit: int) -> str:
     return " ".join(_format_sentence(index, item) for index, item in items[:limit])
 
 
-def _skill_intro(section_key: str, skill_refs: list[str]) -> str:
-    if "business_goal_decompose" in skill_refs:
+def _skill_keys(skills: list[SkillConfig]) -> set[str]:
+    return {skill.skill_key for skill in skills}
+
+
+def _skill_actions(skills: list[SkillConfig]) -> str:
+    actions = [skill.action.rstrip("。") for skill in skills if skill.action]
+    if not actions:
+        return ""
+    return "这一节先把披露事实转成可核查问题：" + "；".join(actions[:3]) + "。"
+
+
+def _prompt_forbids_internal_terms(prompt: PromptConfig) -> bool:
+    return "不写内部系统词。" in prompt.rules
+
+
+def _clean_internal_terms(text: str) -> str:
+    cleaned = text
+    replacements = {
+        "本节调用的解读动作是：": "",
+        "本节调用的解读动作是": "",
+        "prompt_slot": "",
+        "skill_refs": "",
+        "section draft": "",
+        "internal trace": "",
+    }
+    for internal_term, replacement in replacements.items():
+        cleaned = cleaned.replace(internal_term, replacement)
+    return cleaned
+
+
+def _skill_intro(section_key: str, skills: list[SkillConfig]) -> str:
+    keys = _skill_keys(skills)
+    action_text = _skill_actions(skills)
+    if "business_goal_decompose" in keys:
         if section_key == "company_and_industry":
-            return "阅读这一节，先把公司叙事拆成三个问题：它卖什么、进入哪些终端场景、这些场景是否能形成可复制交付。"
+            return f"{action_text}阅读这一节，先把公司叙事拆成三个问题：它卖什么、进入哪些终端场景、这些场景是否能形成可复制交付。"
         if section_key == "personal_investment":
-            return "个人投资视角下，重点不是先判断贵不贵，而是先拆收入质量、研发转化、现金流和风险承受力。"
-    if "reader_value_translate" in skill_refs:
-        return "这一节的价值，是把招股书披露翻译成几个可以继续核查的问题。"
+            return f"{action_text}个人投资视角下，重点不是先判断贵不贵，而是先拆收入质量、研发转化、现金流和风险承受力。"
+    if "reader_value_translate" in keys:
+        return f"{action_text}这一节的价值，是把招股书披露翻译成几个可以继续核查的问题。"
+    if action_text:
+        return action_text
     return "这一节先从已抽取证据中挑出最能支撑判断的部分。"
 
 
-def _skill_interpretation(section_key: str, skill_refs: list[str]) -> str:
+def _skill_interpretation(section_key: str, skills: list[SkillConfig]) -> str:
+    keys = _skill_keys(skills)
     parts: list[str] = []
-    if "capability_match" in skill_refs:
+    if "capability_match" in keys:
         parts.append(
             "这些证据需要放在能力匹配框架下读：不是把 AI 当成概念标签，而是看技术、产品、客户和交付是否互相支撑，单一亮点不足以构成完整商业判断。"
         )
-    if "tension_expand" in skill_refs:
+    if "tension_expand" in keys:
         parts.append(
             "更重要的是看张力：增长、研发投入、亏损、现金流和风险如果不能互相解释，叙事就还没有闭合。"
         )
-    if "reader_value_translate" in skill_refs and section_key == "cognitive_worldview":
+    if "reader_value_translate" in keys and section_key == "cognitive_worldview":
         parts.append(
             "把这套方法迁移到其他公司时，可以先找产品入口，再看客户验证，最后检查收入质量和风险暴露。"
         )
@@ -235,16 +276,18 @@ def _skill_interpretation(section_key: str, skill_refs: list[str]) -> str:
 def _build_paragraphs(
     section_key: str,
     title: str,
-    skill_refs: list[str],
+    skills: list[SkillConfig],
+    prompt: PromptConfig,
     selected_items: list[tuple[int, EvidenceItem]],
 ) -> list[str]:
+    _ = title
     if not selected_items:
         return []
-    intro = _skill_intro(section_key, skill_refs)
+    intro = _skill_intro(section_key, skills)
     first = _sentences(selected_items, 3)
     second = _sentences(selected_items[3:], 4)
     third = _sentences(selected_items[7:], 5)
-    interpretation = _skill_interpretation(section_key, skill_refs)
+    interpretation = _skill_interpretation(section_key, skills)
     paragraphs = [f"{intro}{first}"]
     if second:
         paragraphs.append(f"第二层看证据之间是否互相支持。{second}")
@@ -252,10 +295,12 @@ def _build_paragraphs(
         paragraphs.append(f"再往后看边界条件。{third}")
     if interpretation:
         paragraphs.append(interpretation)
+    if _prompt_forbids_internal_terms(prompt):
+        paragraphs = [_clean_internal_terms(paragraph) for paragraph in paragraphs]
     return paragraphs
 
 
-def _readability_warnings(body: str) -> list[str]:
+def _readability_warnings(body: str, prompt: PromptConfig) -> list[str]:
     warnings: list[str] = []
     if any(token in body for token in FORBIDDEN_RAW_TEXT):
         warnings.append("contains_raw_data_literal")
@@ -265,6 +310,8 @@ def _readability_warnings(body: str) -> list[str]:
     citation_count = body.count("[C-")
     if citation_count > 14:
         warnings.append("too_many_citations")
+    if "事实句必须带 citation id。" in prompt.rules and body and citation_count == 0:
+        warnings.append("missing_citations")
     if len(body) > 6500:
         warnings.append("section_too_long")
     return warnings
@@ -278,13 +325,15 @@ def write_section(
     prompt_slot: str,
     indexed_items: list[tuple[int, EvidenceItem]],
 ) -> SectionWriteResult:
+    prompt = load_prompt_config(prompt_slot)
+    skills = load_skill_configs(skill_refs)
     selected_items = _select_items(section_key, indexed_items)
-    paragraphs = _build_paragraphs(section_key, title, skill_refs, selected_items)
+    paragraphs = _build_paragraphs(section_key, title, skills, prompt, selected_items)
     body = "\n\n".join(paragraphs).strip()
     citation_ids = [_citation_id(index) for index, _ in selected_items]
     return SectionWriteResult(
         body=body,
         selected_items=selected_items,
         citation_ids=citation_ids,
-        readability_warnings=_readability_warnings(body),
+        readability_warnings=_readability_warnings(body, prompt),
     )

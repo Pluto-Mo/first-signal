@@ -1,4 +1,5 @@
 from ipo_evidence.models import EvidenceItem, QualityStatus
+from ipo_evidence.report_runtime import PromptConfig, SkillConfig
 from ipo_evidence.section_writer import write_section
 
 
@@ -98,6 +99,30 @@ def test_write_section_normalizes_table_field_key_line_breaks():
     assert "\\n" not in result.body
 
 
+def test_write_section_keeps_plain_text_value_after_corresponding_data_phrase():
+    result = write_section(
+        section_key="personal_investment",
+        title="个人投资视角",
+        skill_refs=["business_goal_decompose"],
+        prompt_slot="narrative_section",
+        indexed_items=[
+            (
+                1,
+                _text_item(
+                    "E-001",
+                    "报告期内，公司营业收入对应数据为 68,771.52 万元，保持增长。",
+                    "financials",
+                ),
+            )
+        ],
+    )
+
+    assert "68,771.52" in result.body
+    assert "[C-001]" in result.body
+    assert "{'" not in result.body
+    assert "对应数据为" not in result.body
+
+
 def test_write_section_keeps_renderable_table_fact_with_low_value_summary_template():
     item = EvidenceItem(
         evidence_id="E-012",
@@ -189,3 +214,133 @@ def test_write_section_executes_tension_skill_when_requested():
     assert "张力" in result.body
     assert "增长" in result.body
     assert "现金流" in result.body
+
+
+def test_write_section_loads_skill_config_action_text():
+    result = write_section(
+        section_key="company_and_industry",
+        title="公司介绍与行业概况",
+        skill_refs=["capability_match"],
+        prompt_slot="narrative_section",
+        indexed_items=[
+            (
+                1,
+                _text_item(
+                    "E-001",
+                    "公司产品覆盖智慧出行和智慧办公场景，并形成客户交付记录。",
+                ),
+            )
+        ],
+    )
+
+    assert "检查产品、研发、客户和交付能力" in result.body
+    assert "[C-001]" in result.body
+
+
+def test_write_section_uses_prompt_rules_to_clean_internal_terms(monkeypatch):
+    def fake_load_skill_configs(skill_refs: list[str]) -> list[SkillConfig]:
+        return [
+            SkillConfig(
+                skill_key="capability_match",
+                title="能力匹配",
+                action="本节调用的解读动作是：prompt_slot skill_refs section draft internal trace 检查产品、研发、客户和交付能力。",
+                requires=[],
+                produces=[],
+            )
+        ]
+
+    def fake_prompt_without_rule(prompt_slot: str) -> PromptConfig:
+        return PromptConfig(prompt_slot=prompt_slot, purpose="", rules=[])
+
+    def fake_prompt_with_rule(prompt_slot: str) -> PromptConfig:
+        return PromptConfig(
+            prompt_slot=prompt_slot,
+            purpose="",
+            rules=["不写内部系统词。", "事实句必须带 citation id。"],
+        )
+
+    monkeypatch.setattr(
+        "ipo_evidence.section_writer.load_skill_configs",
+        fake_load_skill_configs,
+    )
+    monkeypatch.setattr(
+        "ipo_evidence.section_writer.load_prompt_config",
+        fake_prompt_without_rule,
+    )
+
+    result_without_rule = write_section(
+        section_key="company_and_industry",
+        title="公司介绍与行业概况",
+        skill_refs=["capability_match"],
+        prompt_slot="narrative_section",
+        indexed_items=[
+            (
+                1,
+                _text_item(
+                    "E-001",
+                    "公司产品覆盖智慧出行和智慧办公场景，并形成客户交付记录。",
+                ),
+            )
+        ],
+    )
+
+    assert "prompt_slot" in result_without_rule.body
+
+    monkeypatch.setattr(
+        "ipo_evidence.section_writer.load_prompt_config",
+        fake_prompt_with_rule,
+    )
+
+    result_with_rule = write_section(
+        section_key="company_and_industry",
+        title="公司介绍与行业概况",
+        skill_refs=["capability_match"],
+        prompt_slot="narrative_section",
+        indexed_items=[
+            (
+                1,
+                _text_item(
+                    "E-001",
+                    "公司产品覆盖智慧出行和智慧办公场景，并形成客户交付记录。",
+                ),
+            )
+        ],
+    )
+
+    assert "检查产品、研发、客户和交付能力" in result_with_rule.body
+    assert "[C-001]" in result_with_rule.body
+    assert "本节调用的解读动作是" not in result_with_rule.body
+    assert "prompt_slot" not in result_with_rule.body
+    assert "skill_refs" not in result_with_rule.body
+    assert "section draft" not in result_with_rule.body
+    assert "internal trace" not in result_with_rule.body
+
+
+def test_write_section_rejects_unknown_prompt_slot():
+    try:
+        write_section(
+            section_key="company_and_industry",
+            title="公司介绍与行业概况",
+            skill_refs=[],
+            prompt_slot="missing_prompt",
+            indexed_items=[],
+        )
+    except ValueError as exc:
+        assert "unknown prompt_slot: missing_prompt" in str(exc)
+    else:
+        raise AssertionError("write_section should reject unknown prompt_slot")
+
+
+def test_write_section_rejects_unknown_skill_ref():
+    try:
+        write_section(
+            section_key="company_and_industry",
+            title="公司介绍与行业概况",
+            skill_refs=["missing_skill"],
+            prompt_slot="narrative_section",
+            indexed_items=[],
+        )
+    except ValueError as exc:
+        assert "unknown skill_ref: missing_skill" in str(exc)
+    else:
+        raise AssertionError("write_section should reject unknown skill_ref")
