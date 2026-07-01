@@ -44,11 +44,15 @@ def test_run_one_creates_document_package(tmp_path: Path):
     assert (package / "report_inputs.json").exists()
     assert (package / "report.md").exists()
     assert (package / "citation.json").exists()
+    assert (package / "analysis_log.json").exists()
     assert (package / "reader_bundle.json").exists()
     assert (package / "web_index.json").exists()
     docs_index = read_json(docs / "index.json")
     assert docs_index[0]["doc_id"] == doc_id
     assert docs_index[0]["reader_bundle_path"] == f"{doc_id}/reader_bundle.json"
+    analysis_log = read_json(package / "analysis_log.json")
+    assert analysis_log["doc_id"] == doc_id
+    assert "skipped_or_merged" in analysis_log
 
 
 def test_run_one_uses_parser_selected_from_config(
@@ -114,19 +118,26 @@ def test_regenerate_report_rewrites_report_and_citations(tmp_path: Path):
     package = docs / doc_id
     report_path = package / "report.md"
     citation_path = package / "citation.json"
+    analysis_log_path = package / "analysis_log.json"
     report_path.write_text("broken report", encoding="utf-8")
     citation_path.write_text("[]\n", encoding="utf-8")
+    analysis_log_path.write_text(
+        '{"doc_id":"broken","skipped_or_merged":[{"section_key":"old","reason":"old"}]}\n',
+        encoding="utf-8",
+    )
 
     regenerate_report(doc_id, docs)
 
     report_text = report_path.read_text(encoding="utf-8")
     citations = read_json(citation_path)
+    analysis_log = read_json(analysis_log_path)
     reader_bundle = read_json(package / "reader_bundle.json")
     web_index = read_json(package / "web_index.json")
 
     assert "broken report" not in report_text
     assert "# 测试股份有限公司招股书长篇阅读" in report_text
     assert citations[0]["citation_id"] == "C-001"
+    assert analysis_log["doc_id"] == doc_id
     assert reader_bundle["report_title"] == "测试股份有限公司招股书长篇阅读"
     assert web_index["doc_id"] == doc_id
     assert web_index["company_name"] == "测试股份有限公司"
