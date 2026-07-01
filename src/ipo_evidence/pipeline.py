@@ -30,6 +30,35 @@ def _read_report_inputs(package_dir: Path) -> dict | None:
     return report_inputs
 
 
+def _refresh_report_inputs(
+    package_dir: Path,
+    doc_id: str,
+    company_name: str,
+    packet: EvidencePacket,
+) -> dict:
+    fresh_report_inputs = build_report_inputs(doc_id, company_name, packet)
+    existing_report_inputs = _read_report_inputs(package_dir)
+    if existing_report_inputs is None:
+        write_json(package_dir / "report_inputs.json", fresh_report_inputs)
+        return fresh_report_inputs
+    if "doc_id" in existing_report_inputs and existing_report_inputs.get("doc_id") != doc_id:
+        raise ValueError(
+            f"report inputs doc_id mismatch: expected {doc_id}, got {existing_report_inputs.get('doc_id')}"
+        )
+
+    refreshed_report_inputs = dict(existing_report_inputs)
+    for key in (
+        "doc_id",
+        "company_name",
+        "profile_key",
+        "profile_title",
+        "attention_fields",
+    ):
+        refreshed_report_inputs[key] = fresh_report_inputs[key]
+    write_json(package_dir / "report_inputs.json", refreshed_report_inputs)
+    return refreshed_report_inputs
+
+
 def _evidence_policies(report_inputs: dict | None) -> dict[str, dict]:
     if not report_inputs:
         return {}
@@ -147,11 +176,7 @@ def regenerate_report(doc_id: str, docs_dir: Path) -> None:
         raise ValueError(
             f"evidence packet doc_id mismatch: expected {doc_id}, got {packet.doc_id}"
         )
-    report_inputs = _read_report_inputs(package_dir)
-    if report_inputs and report_inputs.get("doc_id") != doc_id:
-        raise ValueError(
-            f"report inputs doc_id mismatch: expected {doc_id}, got {report_inputs.get('doc_id')}"
-        )
+    report_inputs = _refresh_report_inputs(package_dir, doc_id, manifest.company_name, packet)
 
     manifest.report_status = "reported"
     write_json(manifest_path, manifest)

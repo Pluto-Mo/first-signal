@@ -72,7 +72,7 @@ def _packet_text(packet: EvidencePacket) -> str:
 def select_report_profile(company_name: str, packet: EvidencePacket) -> str:
     text = f"{company_name} {_packet_text(packet)}"
     technology_keywords = ["AI", "芯片", "算法", "核心技术", "研发", "专利", "产品化"]
-    strong_technology_keywords = ["AI", "芯片", "算法", "核心技术", "产品化"]
+    strong_technology_keywords = ["芯片", "算法", "核心技术", "产品化"]
     if (
         sum(1 for keyword in technology_keywords if keyword in text) >= 2
         and any(keyword in text for keyword in strong_technology_keywords)

@@ -196,6 +196,79 @@ def test_regenerate_report_does_not_dump_large_report_inputs(tmp_path: Path):
     assert "{'" not in report_text
 
 
+def test_regenerate_report_refreshes_profile_metadata_without_overwriting_section_edits(
+    tmp_path: Path,
+):
+    inbox = tmp_path / "inbox"
+    docs = tmp_path / "docs"
+    inbox.mkdir()
+    pdf = inbox / "测试股份有限公司招股说明书.pdf"
+    pdf.write_bytes(b"%PDF-1.4\nsample")
+
+    doc_id = run_one(
+        pdf_path=pdf,
+        docs_dir=docs,
+        fixture_path=Path("tests/fixtures/sample_prospectus.txt"),
+    )
+
+    package = docs / doc_id
+    report_inputs_path = package / "report_inputs.json"
+    report_inputs = read_json(report_inputs_path)
+    report_inputs.pop("profile_key")
+    report_inputs.pop("profile_title")
+    report_inputs.pop("attention_fields")
+    first_group = report_inputs["section_groups"][0]
+    first_group["evidence_policy"] = {
+        "min_fact_count": 123,
+        "min_strength": "high",
+        "weak_evidence": "log_only",
+        "no_evidence": "log_only",
+    }
+    first_group["evidence_refs"] = [{"evidence_id": "E-SENTINEL", "rank": 99}]
+    report_inputs_path.write_text(
+        json.dumps(report_inputs, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    regenerate_report(doc_id, docs)
+
+    refreshed = read_json(report_inputs_path)
+    refreshed_first_group = refreshed["section_groups"][0]
+    assert refreshed["profile_key"]
+    assert refreshed["profile_title"]
+    assert refreshed["attention_fields"]
+    assert refreshed["doc_id"] == doc_id
+    assert refreshed["company_name"] == "测试股份有限公司"
+    assert refreshed_first_group["evidence_policy"]["min_fact_count"] == 123
+    assert refreshed_first_group["evidence_refs"] == [{"evidence_id": "E-SENTINEL", "rank": 99}]
+
+
+def test_regenerate_report_rejects_report_inputs_doc_id_mismatch(tmp_path: Path):
+    inbox = tmp_path / "inbox"
+    docs = tmp_path / "docs"
+    inbox.mkdir()
+    pdf = inbox / "测试股份有限公司招股说明书.pdf"
+    pdf.write_bytes(b"%PDF-1.4\nsample")
+
+    doc_id = run_one(
+        pdf_path=pdf,
+        docs_dir=docs,
+        fixture_path=Path("tests/fixtures/sample_prospectus.txt"),
+    )
+
+    package = docs / doc_id
+    report_inputs_path = package / "report_inputs.json"
+    report_inputs = read_json(report_inputs_path)
+    report_inputs["doc_id"] = "other-doc"
+    report_inputs_path.write_text(
+        json.dumps(report_inputs, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="report inputs doc_id mismatch"):
+        regenerate_report(doc_id, docs)
+
+
 def test_regenerate_report_logs_weak_sections_without_adding_report_section(tmp_path: Path):
     inbox = tmp_path / "inbox"
     docs = tmp_path / "docs"
