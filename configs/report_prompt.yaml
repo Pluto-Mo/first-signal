@@ -5,7 +5,7 @@ report_title_suffix: "招股书长篇阅读"
 input_views:
   company_and_industry:
     title: "公司介绍与行业概况"
-    prompt_slot: "company_and_industry"
+    prompt_slot: "narrative_section"
     focus_points:
       - "主营业务"
       - "产品体系"
@@ -42,7 +42,7 @@ input_views:
 
   personal_investment:
     title: "个人投资视角"
-    prompt_slot: "personal_investment"
+    prompt_slot: "narrative_section"
     focus_points:
       - "产品可信度"
       - "研发投入"
@@ -81,7 +81,7 @@ input_views:
 
   cognitive_worldview:
     title: "认知世界的方式"
-    prompt_slot: "cognitive_worldview"
+    prompt_slot: "narrative_section"
     focus_points:
       - "如何拆解行业"
       - "企业如何证明竞争力"

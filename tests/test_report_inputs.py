@@ -56,12 +56,33 @@ def test_build_report_inputs_keeps_dispatch_view_lightweight():
 
     section = report_inputs["section_groups"][0]
     assert section["title"] == "公司介绍与行业概况"
-    assert section["prompt_slot"] == "company_and_industry"
+    assert section["prompt_slot"] == "narrative_section"
     assert section["focus_points"] != []
     assert section["constraints"] != []
     assert section["output_order"] == 1
     assert "quote" not in str(section)
     assert "claim_summary" not in str(section)
+
+
+def test_build_report_inputs_uses_configured_prompt_slots():
+    packet = build_evidence_packet(
+        doc_id="doc_test",
+        source_file="测试股份有限公司招股说明书.pdf",
+        blocks=[],
+        tables=[],
+    )
+
+    report_inputs = build_report_inputs("doc_test", "测试股份有限公司", packet)
+    section_prompt_slots = {
+        section["prompt_slot"] for section in report_inputs["section_groups"]
+    }
+    configured_prompt_slots = {
+        load_yaml("configs/prompts/section_writer.yaml")["prompt_slot"],
+        load_yaml("configs/prompts/stitch_writer.yaml")["prompt_slot"],
+        load_yaml("configs/prompts/citation_checker.yaml")["prompt_slot"],
+    }
+
+    assert section_prompt_slots <= configured_prompt_slots
 
 
 def test_build_report_inputs_uses_evidence_refs_not_evidence_copies():
