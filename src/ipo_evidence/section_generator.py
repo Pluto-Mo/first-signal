@@ -45,6 +45,13 @@ def _string_list(value: Any) -> list[str]:
     return [item for item in value if isinstance(item, str) and item]
 
 
+def _rank_value(ref: dict[str, Any]) -> int:
+    rank = ref.get("rank", 99)
+    if isinstance(rank, int) and rank >= 0:
+        return rank
+    return 99
+
+
 def generate_section_drafts(
     packet: EvidencePacket,
     report_inputs: dict[str, Any] | None,
@@ -60,14 +67,18 @@ def generate_section_drafts(
         refs = group.get("evidence_refs", [])
         items: list[tuple[int, EvidenceItem]] = []
         if isinstance(refs, list):
+            seen_evidence_ids: set[str] = set()
             for ref in sorted(
                 refs,
-                key=lambda ref: ref.get("rank", 99) if isinstance(ref, dict) else 99,
+                key=lambda ref: _rank_value(ref) if isinstance(ref, dict) else 99,
             ):
                 if not isinstance(ref, dict):
                     continue
                 evidence_id = ref.get("evidence_id")
                 if isinstance(evidence_id, str) and evidence_id in indexed:
+                    if evidence_id in seen_evidence_ids:
+                        continue
+                    seen_evidence_ids.add(evidence_id)
                     items.append(indexed[evidence_id])
 
         body, citation_ids = _body_for_items(items)
