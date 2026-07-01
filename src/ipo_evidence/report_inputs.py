@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from functools import lru_cache
 from typing import Any
 
@@ -49,8 +50,14 @@ def _string_list(value: Any) -> list[str]:
 
 def _dict_value(value: Any, fallback: dict[str, Any]) -> dict[str, Any]:
     if isinstance(value, dict):
+        return deepcopy(value)
+    return deepcopy(fallback)
+
+
+def _string_value(value: Any, fallback: str) -> str:
+    if isinstance(value, str) and value:
         return value
-    return fallback.copy()
+    return fallback
 
 
 def build_report_inputs(doc_id: str, company_name: str, packet) -> dict:
@@ -84,7 +91,7 @@ def build_report_inputs(doc_id: str, company_name: str, packet) -> dict:
                 "output_contract": _dict_value(
                     template.get("output_contract"), DEFAULT_OUTPUT_CONTRACT
                 ),
-                "section_role": template.get("section_role", "main"),
+                "section_role": _string_value(template.get("section_role"), "main"),
                 "evidence_refs": refs,
             }
         )

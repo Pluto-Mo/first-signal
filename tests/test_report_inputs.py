@@ -130,3 +130,84 @@ def test_build_report_inputs_adds_architecture_dispatch_contract():
         "requires": ["core_claim", "evidence_chain", "reader_value"],
     }
     assert section["section_role"] == "main"
+
+
+def test_build_report_inputs_defensively_handles_dispatch_contract(monkeypatch):
+    templates = {
+        "fallback_view": {
+            "title": "Fallback View",
+            "prompt_slot": "fallback_view",
+            "focus_points": [],
+            "constraints": [],
+            "output_order": 1,
+            "token_budget": 100,
+            "skill_refs": ["reader_value_translate", "", 123],
+            "evidence_policy": "invalid",
+            "output_contract": None,
+            "section_role": 123,
+            "source_sections": [],
+        },
+        "configured_view": {
+            "title": "Configured View",
+            "prompt_slot": "configured_view",
+            "focus_points": [],
+            "constraints": [],
+            "output_order": 2,
+            "token_budget": 100,
+            "skill_refs": "invalid",
+            "evidence_policy": {"min_fact_count": 1},
+            "output_contract": {
+                "shape": "custom_section",
+                "requires": ["custom_claim"],
+            },
+            "section_role": "supporting",
+            "source_sections": [],
+        },
+    }
+    monkeypatch.setattr(
+        "ipo_evidence.report_inputs._input_view_templates", lambda: templates
+    )
+    packet = build_evidence_packet(
+        doc_id="doc_test",
+        source_file="测试股份有限公司招股说明书.pdf",
+        blocks=[],
+        tables=[],
+    )
+
+    report_inputs = build_report_inputs("doc_test", "测试股份有限公司", packet)
+    fallback_section = report_inputs["section_groups"][0]
+    configured_section = report_inputs["section_groups"][1]
+
+    assert fallback_section["skill_refs"] == ["reader_value_translate"]
+    assert fallback_section["evidence_policy"] == {
+        "min_fact_count": 2,
+        "min_strength": "medium",
+        "weak_evidence": "merge_into_related_section",
+        "no_evidence": "log_only",
+    }
+    assert fallback_section["output_contract"] == {
+        "shape": "narrative_section",
+        "requires": ["core_claim", "evidence_chain", "reader_value"],
+    }
+    assert configured_section["skill_refs"] == []
+    assert configured_section["evidence_policy"] == {"min_fact_count": 1}
+    assert configured_section["output_contract"] == {
+        "shape": "custom_section",
+        "requires": ["custom_claim"],
+    }
+
+    fallback_section["output_contract"]["requires"].append("mutated_fallback")
+    configured_section["output_contract"]["requires"].append("mutated_config")
+
+    next_report_inputs = build_report_inputs("doc_test", "测试股份有限公司", packet)
+
+    assert next_report_inputs["section_groups"][0]["output_contract"] == {
+        "shape": "narrative_section",
+        "requires": ["core_claim", "evidence_chain", "reader_value"],
+    }
+    assert next_report_inputs["section_groups"][1]["output_contract"] == {
+        "shape": "custom_section",
+        "requires": ["custom_claim"],
+    }
+    assert fallback_section["section_role"] == "main"
+    assert configured_section["section_role"] == "supporting"
