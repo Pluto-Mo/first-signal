@@ -53,6 +53,12 @@ def test_run_one_creates_document_package(tmp_path: Path):
     analysis_log = read_json(package / "analysis_log.json")
     assert analysis_log["doc_id"] == doc_id
     assert "skipped_or_merged" in analysis_log
+    manifest = read_json(package / "manifest.json")
+    reader_bundle = read_json(package / "reader_bundle.json")
+    web_index = read_json(package / "web_index.json")
+    assert manifest["report_status"] == "reported"
+    assert reader_bundle["report_status"] == "reported"
+    assert web_index["report_status"] == "reported"
 
 
 def test_run_one_uses_parser_selected_from_config(

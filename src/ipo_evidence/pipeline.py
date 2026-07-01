@@ -112,8 +112,8 @@ def run_one(pdf_path: Path, docs_dir: Path, fixture_path: Path) -> str:
     write_json(package_dir / "parse_report.json", parsed.parse_report)
     if parsed.raw_artifacts:
         write_json(package_dir / "parser_raw.json", parsed.raw_artifacts)
-    _write_report_artifacts(package_dir, manifest, packet, report_inputs)
     manifest.report_status = "reported"
+    _write_report_artifacts(package_dir, manifest, packet, report_inputs)
     write_json(package_dir / "manifest.json", manifest)
     write_json(package_dir / "web_index.json", build_web_index(manifest))
     refresh_docs_index(docs_dir)

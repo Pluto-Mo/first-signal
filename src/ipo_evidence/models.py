@@ -176,6 +176,7 @@ class InternalTrace(BaseModel):
     prompt_slot: str
     evidence_ids: list[str] = Field(default_factory=list)
     citation_ids: list[str] = Field(default_factory=list)
+    evidence_quality_statuses: list[QualityStatus] = Field(default_factory=list)
     fact_count: int = 0
     missing_contract_fields: list[str] = Field(default_factory=list)
 

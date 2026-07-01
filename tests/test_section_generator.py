@@ -49,6 +49,7 @@ def test_generate_section_drafts_uses_section_evidence_refs_and_trace():
     assert drafts[0].citation_ids == ["C-001"]
     assert drafts[0].internal_trace.skill_refs == ["business_goal_decompose"]
     assert drafts[0].internal_trace.evidence_ids == ["E-001"]
+    assert drafts[0].internal_trace.evidence_quality_statuses == [QualityStatus.safe_to_use]
     assert drafts[0].internal_trace.fact_count == 1
 
 
@@ -115,4 +116,9 @@ def test_generate_section_drafts_handles_invalid_rank_unknown_and_duplicate_refs
     assert drafts[0].citation_ids == ["C-002", "C-001", "C-003"]
     assert drafts[0].internal_trace.citation_ids == ["C-002", "C-001", "C-003"]
     assert drafts[0].internal_trace.evidence_ids == ["E-002", "E-001", "E-003"]
+    assert drafts[0].internal_trace.evidence_quality_statuses == [
+        QualityStatus.safe_to_use,
+        QualityStatus.safe_to_use,
+        QualityStatus.safe_to_use,
+    ]
     assert drafts[0].internal_trace.fact_count == 3

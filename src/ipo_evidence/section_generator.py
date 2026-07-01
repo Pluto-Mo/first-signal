@@ -100,6 +100,7 @@ def generate_section_drafts(
             prompt_slot=prompt_slot if isinstance(prompt_slot, str) else "narrative_section",
             evidence_ids=[item.evidence_id for _, item in items],
             citation_ids=citation_ids,
+            evidence_quality_statuses=[item.quality_status for _, item in items],
             fact_count=len(items),
             missing_contract_fields=missing,
         )

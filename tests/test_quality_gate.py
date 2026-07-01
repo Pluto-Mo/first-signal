@@ -1,8 +1,12 @@
-from ipo_evidence.models import InternalTrace, SectionDraft
+from ipo_evidence.models import InternalTrace, QualityStatus, SectionDraft
 from ipo_evidence.quality_gate import apply_quality_gate
 
 
-def _draft(section_key: str, fact_count: int) -> SectionDraft:
+def _draft(
+    section_key: str,
+    fact_count: int,
+    evidence_quality_statuses: list[QualityStatus] | None = None,
+) -> SectionDraft:
     return SectionDraft(
         section_key=section_key,
         title=section_key,
@@ -16,6 +20,7 @@ def _draft(section_key: str, fact_count: int) -> SectionDraft:
             evidence_ids=[],
             citation_ids=[],
             fact_count=fact_count,
+            evidence_quality_statuses=evidence_quality_statuses or [],
         ),
     )
 
@@ -35,6 +40,82 @@ def test_quality_gate_logs_empty_required_section():
     assert decisions[0].section_key == "platform_dependency"
     assert decisions[0].action == "log_only"
     assert decisions[0].reason == "证据数量 0 低于最低要求 2。"
+
+
+def test_quality_gate_logs_section_when_all_evidence_below_medium_strength():
+    draft = _draft(
+        "platform_dependency",
+        2,
+        [QualityStatus.do_not_use, QualityStatus.do_not_use],
+    )
+    policies = {
+        "platform_dependency": {
+            "min_fact_count": 2,
+            "min_strength": "medium",
+            "weak_evidence": "merge_into_related_section",
+        }
+    }
+
+    decisions = apply_quality_gate([draft], policies)
+
+    assert decisions[0].section_key == "platform_dependency"
+    assert decisions[0].action == "log_only"
+    assert decisions[0].reason == "有效证据数量 0 低于最低要求 2。"
+
+
+def test_quality_gate_counts_only_safe_evidence_when_min_strength_is_high():
+    draft = _draft(
+        "platform_dependency",
+        2,
+        [QualityStatus.safe_to_use, QualityStatus.manual_review],
+    )
+    policies = {
+        "platform_dependency": {
+            "min_fact_count": 2,
+            "min_strength": "high",
+            "weak_evidence": "merge_into_related_section",
+        }
+    }
+
+    decisions = apply_quality_gate([draft], policies)
+
+    assert decisions[0].section_key == "platform_dependency"
+    assert decisions[0].action == "merge"
+    assert decisions[0].reason == "有效证据数量 1 低于最低要求 2。"
+
+
+def test_quality_gate_defaults_missing_min_strength_to_medium():
+    draft = _draft(
+        "platform_dependency",
+        2,
+        [QualityStatus.manual_review, QualityStatus.do_not_use],
+    )
+
+    decisions = apply_quality_gate(
+        [draft],
+        {"platform_dependency": {"min_fact_count": 1}},
+    )
+
+    assert decisions[0].section_key == "platform_dependency"
+    assert decisions[0].action == "include"
+    assert decisions[0].reason == "有效证据数量 1 达到最低要求 1。"
+
+
+def test_quality_gate_defaults_invalid_min_strength_to_medium():
+    draft = _draft(
+        "platform_dependency",
+        2,
+        [QualityStatus.manual_review, QualityStatus.do_not_use],
+    )
+
+    decisions = apply_quality_gate(
+        [draft],
+        {"platform_dependency": {"min_fact_count": 1, "min_strength": "invalid"}},
+    )
+
+    assert decisions[0].section_key == "platform_dependency"
+    assert decisions[0].action == "include"
+    assert decisions[0].reason == "有效证据数量 1 达到最低要求 1。"
 
 
 def test_quality_gate_includes_section_when_fact_count_meets_minimum():
