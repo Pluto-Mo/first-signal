@@ -85,7 +85,7 @@ def test_build_report_inputs_uses_configured_prompt_slots():
     assert section_prompt_slots <= configured_prompt_slots
 
 
-def test_build_report_inputs_exposes_selected_profile_metadata():
+def test_build_report_inputs_uses_base_as_weak_default_preset():
     packet = build_evidence_packet(
         doc_id="doc_test",
         source_file="测试股份有限公司招股说明书.pdf",
@@ -102,9 +102,9 @@ def test_build_report_inputs_exposes_selected_profile_metadata():
 
     report_inputs = build_report_inputs("doc_test", "测试股份有限公司", packet)
 
-    assert report_inputs["profile_key"] == "technology_company"
-    assert report_inputs["profile_title"] == "技术公司解读"
-    assert "核心技术" in report_inputs["attention_fields"]
+    assert report_inputs["profile_key"] == "base"
+    assert report_inputs["profile_title"] == "通用招股书解读"
+    assert "产品入口" in report_inputs["attention_fields"]
     assert "quote" not in str(report_inputs["attention_fields"])
 
 

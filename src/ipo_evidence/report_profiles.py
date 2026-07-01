@@ -7,6 +7,9 @@ from ipo_evidence.config import load_yaml
 from ipo_evidence.models import EvidencePacket
 
 
+DEFAULT_REPORT_PROFILE_KEY = "base"
+
+
 @dataclass(frozen=True)
 class ReportProfile:
     profile_key: str
@@ -57,40 +60,16 @@ def load_report_profile(profile_key: str) -> ReportProfile:
     )
 
 
-def _packet_text(packet: EvidencePacket) -> str:
-    values: list[str] = []
-    for item in packet.items:
-        values.append(item.claim_summary)
-        values.extend(item.section_path)
-        if item.quote:
-            values.append(item.quote)
-        if item.table_title:
-            values.append(item.table_title)
-    return " ".join(values)
+def default_report_profile_key() -> str:
+    return DEFAULT_REPORT_PROFILE_KEY
 
 
 def select_report_profile(company_name: str, packet: EvidencePacket) -> str:
-    text = f"{company_name} {_packet_text(packet)}"
-    technology_keywords = ["AI", "芯片", "算法", "核心技术", "研发", "专利", "产品化"]
-    strong_technology_keywords = ["芯片", "算法", "核心技术", "产品化"]
-    if (
-        sum(1 for keyword in technology_keywords if keyword in text) >= 2
-        and any(keyword in text for keyword in strong_technology_keywords)
-    ):
-        return "technology_company"
+    """Compatibility wrapper for the weak default preset.
 
-    keyword_groups = (
-        (
-            "consumer_product",
-            ["消费", "渠道", "电商", "零售", "售后", "价格带", "供应链"],
-        ),
-        (
-            "cyclical_industry",
-            ["产能", "原材料", "库存", "资本开支", "价格周期", "供需"],
-        ),
-    )
-    for profile_key, keywords in keyword_groups:
-        matches = sum(1 for keyword in keywords if keyword in text)
-        if matches >= 2:
-            return profile_key
-    return "base"
+    The report layer intentionally does not infer an industry profile from
+    prospectus text. Views and skills own interpretation; profile is only a
+    weak preset unless explicitly configured elsewhere.
+    """
+    _ = company_name, packet
+    return default_report_profile_key()

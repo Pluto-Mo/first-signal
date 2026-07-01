@@ -1,4 +1,8 @@
-# Profile-Driven Report Inputs Implementation Plan
+# Superseded: Profile-Driven Report Inputs Implementation Plan
+
+> **Status:** Superseded. Do not execute this plan.
+>
+> **Reason:** The architecture direction changed after review: profile must be a weak preset, not an upstream classifier or section-group driver. The next implementation should use a "strong skills, views orchestration, prompt contract, weak preset" model.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

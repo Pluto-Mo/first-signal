@@ -65,22 +65,22 @@ def test_select_report_profile_defaults_to_base():
     assert profile_key == "base"
 
 
-def test_select_report_profile_detects_technology_company():
+def test_select_report_profile_does_not_auto_classify_technology_company():
     profile_key = select_report_profile(
         "测试股份有限公司",
         _packet("公司核心技术包括 AI 芯片、算法、研发平台和专利，主要产品已实现销售。"),
     )
 
-    assert profile_key == "technology_company"
+    assert profile_key == "base"
 
 
-def test_select_report_profile_does_not_treat_generic_r_and_d_as_technology():
+def test_select_report_profile_does_not_auto_classify_consumer_product():
     profile_key = select_report_profile(
         "测试股份有限公司",
         _packet("公司持续研发并取得专利，同时通过渠道和供应链组织消费产品销售，主要产品已实现销售。"),
     )
 
-    assert profile_key == "consumer_product"
+    assert profile_key == "base"
 
 
 def test_select_report_profile_does_not_treat_ai_tool_usage_as_technology():
@@ -89,4 +89,4 @@ def test_select_report_profile_does_not_treat_ai_tool_usage_as_technology():
         _packet("公司使用 AI 工具辅助研发，同时通过渠道和供应链组织消费产品销售，主要产品已实现销售。"),
     )
 
-    assert profile_key == "consumer_product"
+    assert profile_key == "base"

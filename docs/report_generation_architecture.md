@@ -59,7 +59,7 @@ reader_value_translate      读者价值翻译
 tension_expand              矛盾张力展开
 ```
 
-行业方法论通过 profile 提供关注字段，而不是为每个行业复制一大套 skills。
+行业、场景或读者偏好的差异不应通过强分类 profile 主导。核心方法论应沉淀为可组合的 skills；preset 只提供默认组合建议，不能替代 `section_groups/views` 的编排。
 
 ### 1.4 prompt 是单段写作规则
 
@@ -104,8 +104,8 @@ flowchart LR
 ## 3. 生成流程
 
 ```text
-1. 根据 company_profile 选择 report profile
-2. report_inputs 根据 profile 生成 section_groups
+1. 根据默认 preset 或显式配置确定初始 views
+2. report_inputs 通过 section_groups 编排 evidence_refs、skill_refs 和 prompt_slot
 3. 每个 section_group 只加载自己的 evidence_refs
 4. section_generator 加载当前 skill_refs 和 prompt_slot
 5. section_generator 输出 section_draft 与 internal_trace
@@ -133,7 +133,7 @@ report.md -> citation ids
 ### 4.2 弱耦合
 
 ```text
-report_inputs -> profile config
+report_inputs -> weak preset config
 section_generator -> prompt_slot
 stitcher -> internal_trace
 quality_gate -> evidence_policy
@@ -146,12 +146,12 @@ quality_gate -> evidence_policy
 ```text
 parser 与行业方法论解耦
 evidence 构建与最终写作风格解耦
-行业 profile 与主 pipeline 解耦
+weak preset 与主 pipeline 解耦
 analysis_log 与最终 report 解耦
 外部数据接入与基础招股书解析解耦
 ```
 
-解耦的含义是：解析层只产出可引用证据；消费产品、技术公司、周期行业等方法论通过 profile 和 skills 接入；最终报告只展示成熟内容；内部日志服务后续优化。
+解耦的含义是：解析层只产出可引用证据；消费产品、技术公司、周期行业等关注点应通过 skills、views 和可选 preset 组合接入；最终报告只展示成熟内容；内部日志服务后续优化。
 
 ## 5. 可扩展部分
 
@@ -220,7 +220,9 @@ reader_value_translate
 tension_expand
 ```
 
-行业 profile 只提供关注字段：
+skills 是解读层的核心模块。不同报告不是先把公司分入某个行业框架，而是在 `section_groups/views` 中自由组合、替换、重排这些 skills。
+
+弱 preset 只能提供默认关注字段或默认 skill 组合，例如：
 
 ```yaml
 consumer_product:
@@ -253,7 +255,7 @@ cyclical_industry:
     - 行业供需
 ```
 
-这样每个 section 只加载当前需要的 1-2 个通用 skill 和一个行业 profile 的少量参数。
+这样每个 section 只加载当前需要的 1-2 个通用 skill，以及一个可选 preset 的少量默认参数。preset 不应自动覆盖 views 的编排，也不应成为上游分类器。
 
 ### 5.5 Prompt 层
 
@@ -335,6 +337,8 @@ src/ipo_evidence/
   report_generator.py
 ```
 
+`report_profiles/` 是历史目录名，语义上应理解为 weak presets。后续如重命名为 `report_presets/`，应先改文档再迁移代码；在迁移前不得把它当成自动行业分类入口。
+
 `report_generator.py` 最终可以变薄，只负责编排：
 
 ```text
@@ -348,9 +352,9 @@ write citation.json
 write reader_bundle.json
 ```
 
-## 7. 消费产品公司解读包的抽象
+## 7. 消费产品 preset 的抽象
 
-消费产品公司 profile 关注的核心不是公司是否值得被夸，而是公司的产品、渠道、营销、供应链、售后和用户口碑如何共同支撑增长叙事。
+消费产品 preset 只能作为一个可选默认模板，不能作为自动分类入口。它关注的核心不是公司是否值得被夸，而是产品、渠道、营销、供应链、售后和用户口碑如何共同支撑增长叙事。
 
 可生成的 section 示例：
 
@@ -363,7 +367,7 @@ write reader_bundle.json
 不同读者的可用结论
 ```
 
-每个 section 按自己的 evidence_refs 生成，完成度不足的 section 进入日志或合并，不在最终报告中留下空洞模块。
+每个 section 按自己的 evidence_refs 和 skill_refs 生成。消费产品 preset 可以建议关注字段，但最终编排仍由 `section_groups/views` 决定；完成度不足的 section 进入日志或合并，不在最终报告中留下空洞模块。
 
 ## 8. 当前 PR 的定位
 
@@ -374,7 +378,7 @@ PR 1: 扩展 report_inputs schema
 PR 2: 新增 section_generator 和 internal_trace
 PR 3: 新增 quality_gate 和 analysis_log
 PR 4: 新增 stitcher
-PR 5: 新增 consumer_product profile
+PR 5: 新增弱 preset / 默认模板能力
 ```
 
 每个 PR 都可以单独验证，避免一次性引入过重架构。

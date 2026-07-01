@@ -5,7 +5,7 @@ from functools import lru_cache
 from typing import Any
 
 from ipo_evidence.config import load_yaml
-from ipo_evidence.report_profiles import load_report_profile, select_report_profile
+from ipo_evidence.report_profiles import default_report_profile_key, load_report_profile
 
 
 DEFAULT_EVIDENCE_POLICY = {
@@ -97,7 +97,7 @@ def build_report_inputs(doc_id: str, company_name: str, packet) -> dict:
             }
         )
 
-    profile_key = select_report_profile(company_name, packet)
+    profile_key = default_report_profile_key()
     profile = load_report_profile(profile_key)
 
     return {
