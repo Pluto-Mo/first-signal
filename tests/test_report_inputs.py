@@ -85,6 +85,29 @@ def test_build_report_inputs_uses_configured_prompt_slots():
     assert section_prompt_slots <= configured_prompt_slots
 
 
+def test_build_report_inputs_exposes_selected_profile_metadata():
+    packet = build_evidence_packet(
+        doc_id="doc_test",
+        source_file="测试股份有限公司招股说明书.pdf",
+        blocks=[
+            Block(
+                block_id="B-000002",
+                page_number=2,
+                text="公司核心技术包括 AI 芯片、算法、研发平台和专利，主要产品已实现销售。",
+                section_path=["业务与技术"],
+            )
+        ],
+        tables=[],
+    )
+
+    report_inputs = build_report_inputs("doc_test", "测试股份有限公司", packet)
+
+    assert report_inputs["profile_key"] == "technology_company"
+    assert report_inputs["profile_title"] == "技术公司解读"
+    assert "核心技术" in report_inputs["attention_fields"]
+    assert "quote" not in str(report_inputs["attention_fields"])
+
+
 def test_build_report_inputs_uses_evidence_refs_not_evidence_copies():
     packet = build_evidence_packet(
         doc_id="doc_test",
