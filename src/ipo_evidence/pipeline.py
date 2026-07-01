@@ -12,8 +12,8 @@ from ipo_evidence.models import EvidencePacket, Manifest, QualityStatus
 from ipo_evidence.parser import create_parser
 from ipo_evidence.quality_gate import apply_quality_gate
 from ipo_evidence.reader_bundle import build_reader_bundle
+from ipo_evidence.report_assembler import assemble_report
 from ipo_evidence.report_inputs import build_report_inputs
-from ipo_evidence.report_generator import generate_report
 from ipo_evidence.section_generator import generate_section_drafts
 from ipo_evidence.section_mapper import assign_section_paths, build_source_ast, map_canonical_sections
 from ipo_evidence.table_extractor import extract_tables
@@ -53,11 +53,17 @@ def _write_report_artifacts(
     packet: EvidencePacket,
     report_inputs: dict | None = None,
 ) -> None:
-    report = generate_report(manifest.company_name, packet, report_inputs)
     citations = build_citations(packet)
     section_drafts = generate_section_drafts(packet, report_inputs)
     quality_decisions = apply_quality_gate(section_drafts, _evidence_policies(report_inputs))
     analysis_log = build_analysis_log(packet.doc_id, quality_decisions)
+    valid_citation_ids = {citation.citation_id for citation in citations}
+    report = assemble_report(
+        manifest.company_name,
+        section_drafts,
+        quality_decisions,
+        valid_citation_ids=valid_citation_ids,
+    )
     reader_bundle = build_reader_bundle(manifest, report, citations, packet)
     web_index = build_web_index(manifest)
 

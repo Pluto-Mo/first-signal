@@ -194,15 +194,28 @@ class QualityGateDecision(BaseModel):
     section_key: str
     action: Literal["include", "merge", "log_only"]
     reason: str
+    title: str | None = None
+    evidence_count: int | None = None
+    min_fact_count: int | None = None
+    strength: str | None = None
+    required_strength: str | None = None
     needed_evidence: list[str] = Field(default_factory=list)
     suggested_next_step: str | None = None
+    suggested_next_steps: list[str] = Field(default_factory=list)
 
 
 class AnalysisLogEntry(BaseModel):
     section_key: str
+    action: Literal["merge", "log_only"]
     reason: str
+    title: str | None = None
+    evidence_count: int | None = None
+    min_fact_count: int | None = None
+    strength: str | None = None
+    required_strength: str | None = None
     needed_evidence: list[str] = Field(default_factory=list)
     suggested_next_step: str | None = None
+    suggested_next_steps: list[str] = Field(default_factory=list)
 
 
 class AnalysisLog(BaseModel):

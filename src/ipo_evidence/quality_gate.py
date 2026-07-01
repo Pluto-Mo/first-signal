@@ -43,6 +43,12 @@ def _meets_min_strength(status: QualityStatus, min_strength: EvidenceStrength) -
     return _STRENGTH_RANK[_QUALITY_STRENGTH[status]] >= _STRENGTH_RANK[min_strength]
 
 
+def _strongest_strength(statuses: list[QualityStatus]) -> EvidenceStrength | None:
+    if not statuses:
+        return None
+    return max((_QUALITY_STRENGTH[status] for status in statuses), key=lambda strength: _STRENGTH_RANK[strength])
+
+
 def _effective_fact_count(draft: SectionDraft, policy: dict[str, Any]) -> int:
     statuses = draft.internal_trace.evidence_quality_statuses
     if not statuses:
@@ -60,7 +66,9 @@ def apply_quality_gate(
     for draft in drafts:
         policy = policies_by_section.get(draft.section_key, {})
         min_fact_count = _min_fact_count(policy)
+        min_strength = _min_strength(policy)
         effective_fact_count = _effective_fact_count(draft, policy)
+        strength = _strongest_strength(draft.internal_trace.evidence_quality_statuses)
         reason_prefix = (
             "有效证据数量"
             if draft.internal_trace.evidence_quality_statuses
@@ -73,8 +81,14 @@ def apply_quality_gate(
                     section_key=draft.section_key,
                     action="log_only",
                     reason=f"{reason_prefix} {effective_fact_count} 低于最低要求 {min_fact_count}。",
+                    title=draft.title,
+                    evidence_count=effective_fact_count,
+                    min_fact_count=min_fact_count,
+                    strength=strength,
+                    required_strength=min_strength,
                     needed_evidence=[f"补充 {draft.section_key} 的可引用证据"],
                     suggested_next_step="补充证据后重新生成该 section。",
+                    suggested_next_steps=["补充证据后重新生成该 section。"],
                 )
             )
             continue
@@ -85,8 +99,14 @@ def apply_quality_gate(
                     section_key=draft.section_key,
                     action=_action_for_weak(policy),
                     reason=f"{reason_prefix} {effective_fact_count} 低于最低要求 {min_fact_count}。",
+                    title=draft.title,
+                    evidence_count=effective_fact_count,
+                    min_fact_count=min_fact_count,
+                    strength=strength,
+                    required_strength=min_strength,
                     needed_evidence=[f"补充 {draft.section_key} 的 supporting evidence"],
                     suggested_next_step="合并到相关段落，或补足证据后独立成段。",
+                    suggested_next_steps=["合并到相关段落，或补足证据后独立成段。"],
                 )
             )
             continue
@@ -96,6 +116,11 @@ def apply_quality_gate(
                 section_key=draft.section_key,
                 action="include",
                 reason=f"{reason_prefix} {effective_fact_count} 达到最低要求 {min_fact_count}。",
+                title=draft.title,
+                evidence_count=effective_fact_count,
+                min_fact_count=min_fact_count,
+                strength=strength,
+                required_strength=min_strength,
             )
         )
     return decisions

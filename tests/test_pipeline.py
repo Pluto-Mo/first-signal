@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -53,11 +54,19 @@ def test_run_one_creates_document_package(tmp_path: Path):
     analysis_log = read_json(package / "analysis_log.json")
     assert analysis_log["doc_id"] == doc_id
     assert "skipped_or_merged" in analysis_log
+    report_text = (package / "report.md").read_text(encoding="utf-8")
+    assert "本文基于招股说明书中已抽取的可引用证据" in report_text
+    assert "读这份招股书" not in report_text
+    assert "公司介绍与行业概况" in report_text
+    citations = read_json(package / "citation.json")
+    citation_ids = {citation["citation_id"] for citation in citations}
+    assert set(re.findall(r"\[(C-\d{3})\]", report_text)) <= citation_ids
     manifest = read_json(package / "manifest.json")
     reader_bundle = read_json(package / "reader_bundle.json")
     web_index = read_json(package / "web_index.json")
     assert manifest["report_status"] == "reported"
     assert reader_bundle["report_status"] == "reported"
+    assert any(section["title"] == "公司介绍与行业概况" for section in reader_bundle["sections"])
     assert web_index["report_status"] == "reported"
 
 
@@ -147,6 +156,48 @@ def test_regenerate_report_rewrites_report_and_citations(tmp_path: Path):
     assert reader_bundle["report_title"] == "测试股份有限公司招股书长篇阅读"
     assert web_index["doc_id"] == doc_id
     assert web_index["company_name"] == "测试股份有限公司"
+
+
+def test_regenerate_report_logs_weak_sections_without_adding_report_section(tmp_path: Path):
+    inbox = tmp_path / "inbox"
+    docs = tmp_path / "docs"
+    inbox.mkdir()
+    pdf = inbox / "测试股份有限公司招股说明书.pdf"
+    pdf.write_bytes(b"%PDF-1.4\nsample")
+
+    doc_id = run_one(
+        pdf_path=pdf,
+        docs_dir=docs,
+        fixture_path=Path("tests/fixtures/sample_prospectus.txt"),
+    )
+
+    package = docs / doc_id
+    report_inputs_path = package / "report_inputs.json"
+    report_inputs = read_json(report_inputs_path)
+    for group in report_inputs["section_groups"]:
+        if group["section_key"] == "company_and_industry":
+            group["evidence_policy"] = {
+                "min_fact_count": 999,
+                "min_strength": "medium",
+                "weak_evidence": "merge_into_related_section",
+                "no_evidence": "log_only",
+            }
+    report_inputs_path.write_text(
+        json.dumps(report_inputs, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    regenerate_report(doc_id, docs)
+
+    report_text = (package / "report.md").read_text(encoding="utf-8")
+    analysis_log = read_json(package / "analysis_log.json")
+
+    assert "公司介绍与行业概况" not in report_text
+    assert any(
+        entry["section_key"] == "company_and_industry"
+        and entry["action"] == "merge"
+        for entry in analysis_log["skipped_or_merged"]
+    )
 
 
 def test_regenerate_report_updates_manifest_and_web_index_status(tmp_path: Path):
