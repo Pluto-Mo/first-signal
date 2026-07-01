@@ -18,16 +18,144 @@ SECTION_ORDER = [
 ]
 
 KEYWORDS = {
-    "identity": ["国内领先", "专注", "主营业务", "对话式", "端侧", "智能终端", "全栈"],
-    "product": ["产品", "智慧出行", "智慧办公", "智慧物联", "AI软件", "AI硬件", "交付模式"],
-    "scenario": ["上车", "车载", "智能吸顶麦", "会议", "教育", "智能家居", "机器人", "穿戴"],
-    "industry": ["市场规模", "年均复合增长率", "灼识咨询", "产业链", "市占率", "行业", "竞争"],
-    "technology": ["研发", "算法", "模型", "大模型", "芯片", "核心技术", "智能体", "端侧算法"],
-    "financial": ["营业收入", "收入", "毛利率", "利润", "亏损", "现金流", "研发费用", "报告期"],
-    "customer": ["客户", "前五", "比亚迪", "奔驰", "华为", "阿里", "美的", "科沃斯", "销售比例"],
-    "proceeds": ["募集资金", "募投", "投资项目", "研发升级", "DUI中台", "资金运用"],
-    "risk": ["风险", "亏损", "现金流量净额", "应收账款", "存货", "价格上涨", "坏账", "不利影响", "供应商"],
-    "governance": ["治理", "董事会", "股东", "控制", "承诺", "内控", "关联交易"],
+    "identity": [
+        "公司主要从事",
+        "主营业务",
+        "主要业务",
+        "专注",
+        "定位",
+        "发行人",
+        "产品服务",
+    ],
+    "product": [
+        "产品",
+        "服务",
+        "解决方案",
+        "产品体系",
+        "业务模式",
+        "硬件",
+        "软件",
+        "系统",
+    ],
+    "scenario": [
+        "应用场景",
+        "场景",
+        "客户需求",
+        "行业应用",
+        "终端",
+        "渠道",
+        "交付",
+        "使用",
+    ],
+    "industry": [
+        "市场规模",
+        "年均复合增长率",
+        "产业链",
+        "市占率",
+        "市场份额",
+        "行业",
+        "竞争",
+        "趋势",
+        "渗透率",
+    ],
+    "technology": [
+        "研发",
+        "研发投入",
+        "研发费用",
+        "核心技术",
+        "技术体系",
+        "专利",
+        "软件",
+        "硬件",
+        "算法",
+        "平台",
+    ],
+    "talent": [
+        "研发人员",
+        "核心技术人员",
+        "技术骨干",
+        "员工",
+        "人才",
+        "团队",
+        "信息化",
+        "结构设计",
+        "制造",
+    ],
+    "channel": [
+        "销售模式",
+        "渠道",
+        "经销",
+        "直销",
+        "线上",
+        "线下",
+        "电商",
+        "平台",
+        "客户",
+        "供应商",
+    ],
+    "financial": [
+        "营业收入",
+        "收入",
+        "毛利率",
+        "利润",
+        "亏损",
+        "现金流",
+        "研发费用",
+        "销售费用",
+        "报告期",
+    ],
+    "customer": [
+        "客户",
+        "前五",
+        "销售比例",
+        "集中度",
+        "主要客户",
+        "合作",
+        "订单",
+        "终端客户",
+    ],
+    "proceeds": [
+        "募集资金",
+        "募投",
+        "投资项目",
+        "研发升级",
+        "建设项目",
+        "资金运用",
+        "产能",
+    ],
+    "risk": [
+        "风险",
+        "亏损",
+        "现金流量净额",
+        "应收账款",
+        "存货",
+        "价格上涨",
+        "坏账",
+        "不利影响",
+        "供应商",
+        "客户集中",
+    ],
+    "governance": [
+        "治理",
+        "董事会",
+        "股东",
+        "控制",
+        "承诺",
+        "内控",
+        "关联交易",
+        "关联方",
+    ],
+    "disclosure_gap": [
+        "未披露",
+        "未提及",
+        "缺少",
+        "无法",
+        "平台",
+        "渠道",
+        "客户",
+        "店铺",
+        "第三方",
+    ],
 }
 
 LOW_VALUE_SNIPPETS = [
@@ -43,15 +171,38 @@ LOW_VALUE_SNIPPETS = [
     "综上",
     "通过本项目",
     "有助于公司形成",
-    "平台运营与销售",
     "董事、监事/",
-    "主营业务成本",
     "合并利润表",
-    "主要财务指标显示：覆盖项目",
-    "按2024 年度高于",
 ]
 
-BROKEN_ENDINGS = ("在", "提", "所处", "境外", "销售", "客户", "和", "及", "以及", "、")
+BROKEN_ENDINGS = ("在", "提", "所处", "境外", "销售", "客户", "和", "与", "或", "及", "以及", "、")
+SUBJECT_FIELD_KEYS = (
+    "产品",
+    "项目",
+    "业务指标",
+    "应用领域",
+    "公司名称",
+    "客户名称",
+    "供应商名称",
+    "类别",
+    "名称",
+)
+IMPORTANT_FIELD_KEYWORDS = (
+    "收入",
+    "占比",
+    "毛利率",
+    "研发",
+    "销售费用",
+    "现金流",
+    "应收账款",
+    "存货",
+    "募集资金",
+    "投资",
+    "金额",
+    "数量",
+    "比例",
+    "报告期",
+)
 
 
 def _citation_id(index: int) -> str:
@@ -79,7 +230,37 @@ def _readable_value(value: str) -> str:
 
 
 def _format_fields(fields: dict[str, str]) -> str:
-    return "；".join(f"{key}：{value}" for key, value in fields.items())
+    return "；".join(f"{key}：{_readable_value(value)}" for key, value in fields.items())
+
+
+def _table_subject(fields: dict[str, str]) -> str | None:
+    for key in SUBJECT_FIELD_KEYS:
+        value = fields.get(key)
+        if value:
+            return value
+    for key, value in fields.items():
+        if value and not any(keyword in key for keyword in IMPORTANT_FIELD_KEYWORDS):
+            return value
+    return None
+
+
+def _important_fields(fields: dict[str, str], limit: int = 5) -> dict[str, str]:
+    selected: dict[str, str] = {}
+    for key, value in fields.items():
+        if key in SUBJECT_FIELD_KEYS:
+            continue
+        if any(keyword in key for keyword in IMPORTANT_FIELD_KEYWORDS):
+            selected[key] = value
+        if len(selected) >= limit:
+            break
+    if selected:
+        return selected
+    for key, value in fields.items():
+        if key not in SUBJECT_FIELD_KEYS:
+            selected[key] = value
+        if len(selected) >= limit:
+            break
+    return selected or fields
 
 
 def _sentence(item: EvidenceItem, citation_id: str, limit: int = 185) -> str:
@@ -96,14 +277,14 @@ def _sentence(item: EvidenceItem, citation_id: str, limit: int = 185) -> str:
         if covered and total_ratio and concentration:
             return f"{covered}合计收入占比为 {total_ratio}，{concentration}。[{citation_id}]"
 
-        first = item.fields.get("第一项")
-        second = item.fields.get("第二项")
-        gap = item.fields.get("差额")
-        metric = item.fields.get("比较指标")
-        if first and second and gap and metric:
-            return f"{first}按{metric}高于{second}，差额为 {_readable_value(gap)}。[{citation_id}]"
+        subject = _table_subject(item.fields)
+        table_title = item.table_title or "表格"
+        fields = _important_fields(item.fields)
+        formatted = _format_fields(fields)
+        if subject:
+            return f"{table_title}显示，{subject}的关键字段为：{formatted}。[{citation_id}]"
+        return f"{table_title}显示：{formatted}。[{citation_id}]"
 
-        return f"{item.table_title or '产品收入结构表'}显示：{_format_fields(item.fields)}。[{citation_id}]"
     return f"{_clean_text(item.claim_summary, limit)}。[{citation_id}]"
 
 
@@ -189,8 +370,36 @@ def _text_only(items: list[tuple[int, EvidenceItem]]) -> list[tuple[int, Evidenc
     return [pair for pair in items if pair[1].source_type == "text_quote"]
 
 
+def _section_items(
+    grouped: dict[str, list[tuple[int, EvidenceItem]]],
+    section_keys: list[str],
+) -> list[tuple[int, EvidenceItem]]:
+    return _merge_unique(*(grouped.get(section_key, []) for section_key in section_keys))
+
+
+def _view_items(
+    view_key: str,
+    fallback_sections: list[str],
+    grouped: dict[str, list[tuple[int, EvidenceItem]]],
+    input_groups: dict[str, dict[str, Any]],
+    item_index: dict[str, tuple[int, EvidenceItem]],
+) -> list[tuple[int, EvidenceItem]]:
+    configured = _items_for_input_group(input_groups.get(view_key, {}), item_index)
+    fallback = _section_items(grouped, fallback_sections)
+    return _merge_unique(configured, fallback)
+
+
 def _score(item: EvidenceItem, keywords: list[str]) -> int:
-    text = item.claim_summary + " " + (item.quote or "") + " " + " ".join(item.section_path)
+    field_text = _format_fields(item.fields) if item.fields else ""
+    text = " ".join(
+        [
+            item.claim_summary,
+            item.quote or "",
+            item.table_title or "",
+            field_text,
+            " ".join(item.section_path),
+        ]
+    )
     summary = item.claim_summary.strip().rstrip("。；;，,")
     score = 0
     for keyword in keywords:
@@ -225,7 +434,11 @@ def _select(
         candidates = items
     ranked = sorted(
         candidates,
-        key=lambda pair: (-_score(pair[1], keywords), abs(len(pair[1].claim_summary) - 120), pair[0]),
+        key=lambda pair: (
+            -_score(pair[1], keywords),
+            abs(len(pair[1].claim_summary) - 120),
+            pair[0],
+        ),
     )
     selected: list[tuple[int, EvidenceItem]] = []
     selected_keys: set[str] = set()
@@ -290,6 +503,8 @@ def _report_body(
     report_inputs: dict[str, Any] | None,
     item_index: dict[str, tuple[int, EvidenceItem]],
 ) -> list[str]:
+    input_groups = _input_group_map(report_inputs)
+
     about = grouped.get("about_company", [])
     business = grouped.get("business_and_product", [])
     financials = grouped.get("financials", [])
@@ -298,147 +513,130 @@ def _report_body(
     governance = grouped.get("governance", [])
     related_party = grouped.get("related_party", [])
 
-    input_groups = _input_group_map(report_inputs)
-    company_view = _merge_unique(
-        _items_for_input_group(input_groups.get("company_and_industry", {}), item_index),
-        about,
-        business,
-        financials,
+    signal_view = _view_items(
+        "signal_and_question",
+        ["about_company", "business_and_product", "financials", "risks"],
+        grouped,
+        input_groups,
+        item_index,
     )
-    investment_view = _merge_unique(
-        _items_for_input_group(input_groups.get("personal_investment", {}), item_index),
-        business,
-        financials,
-        proceeds,
-        risks,
-        governance,
+    capability_view = _view_items(
+        "business_capability_chain",
+        ["about_company", "business_and_product", "financials", "use_of_proceeds", "governance"],
+        grouped,
+        input_groups,
+        item_index,
     )
-    worldview = _merge_unique(
-        _items_for_input_group(input_groups.get("cognitive_worldview", {}), item_index),
-        about,
-        business,
-        financials,
-        proceeds,
-        risks,
+    disclosure_view = _view_items(
+        "disclosure_gap_and_risk",
+        ["financials", "risks", "governance", "related_party", "business_and_product"],
+        grouped,
+        input_groups,
+        item_index,
+    )
+    reader_view = _view_items(
+        "reader_action_map",
+        [
+            "about_company",
+            "business_and_product",
+            "financials",
+            "use_of_proceeds",
+            "risks",
+            "governance",
+        ],
+        grouped,
+        input_groups,
+        item_index,
     )
 
     used_ids: set[str] = set()
     identity = _fact(
-        _merge_unique(about, business),
+        _merge_unique(about, business, signal_view),
         KEYWORDS["identity"] + KEYWORDS["product"],
         "材料中暂未抽出可引用的主营业务描述。",
         used_ids=used_ids,
     )
     product = _facts(
-        business,
-        KEYWORDS["product"],
-        "材料中暂未抽出可引用的产品体系。",
-        count=2,
-        used_ids=used_ids,
-    )
-    scenarios = _facts(
-        business,
-        KEYWORDS["scenario"],
-        "材料中暂未抽出可引用的具体应用场景。",
+        _merge_unique(business, signal_view),
+        KEYWORDS["product"] + KEYWORDS["scenario"],
+        "材料中暂未抽出可引用的产品或应用场景。",
         count=3,
         used_ids=used_ids,
     )
     industry = _facts(
-        company_view,
+        signal_view,
         KEYWORDS["industry"],
-        "材料中暂未抽出可引用的行业规模或行业格局。",
-        count=3,
+        "材料中暂未抽出可引用的行业规模、趋势或竞争格局。",
+        count=2,
         used_ids=used_ids,
     )
     technology = _facts(
-        _merge_unique(about, business),
+        _merge_unique(capability_view, business, about),
         KEYWORDS["technology"],
-        "材料中暂未抽出可引用的技术体系。",
+        "材料中暂未抽出可引用的研发或技术储备。",
         count=2,
         used_ids=used_ids,
     )
-    personal_product = _facts(
-        _text_only(business),
-        KEYWORDS["scenario"] + ["自主品牌", "客户", "海外", "量产车型", "头部品牌"],
-        "材料中暂未抽出可引用的产品落地证据。",
+    talent = _facts(
+        _text_only(_merge_unique(capability_view, about, business, governance)),
+        KEYWORDS["talent"],
+        "材料中暂未抽出可引用的人员或组织能力描述。",
+        count=2,
+        used_ids=used_ids,
+    )
+    channel_customer = _facts(
+        _text_only(_merge_unique(capability_view, business, about, governance)),
+        KEYWORDS["channel"] + KEYWORDS["customer"],
+        "材料中暂未抽出可引用的客户或渠道验证。",
         count=3,
+        used_ids=used_ids,
     )
     revenue = _facts(
-        _text_only(financials),
+        _merge_unique(financials, capability_view, reader_view),
         KEYWORDS["financial"],
-        "材料中暂未抽出可引用的收入和盈利信息。",
-        count=2,
-        used_ids=used_ids,
-    )
-    rd = _facts(
-        _merge_unique(financials, about, business),
-        ["研发投入", "研发费用", "研发人员", "核心技术", "费用化"],
-        "材料中暂未抽出可引用的研发投入。",
-        count=2,
-        used_ids=used_ids,
-    )
-    sales = _fact(
-        financials,
-        ["销售费用率", "销售费用", "同行业可比", "期间费用率", "优化"],
-        "材料中暂未抽出可引用的销售费用。",
-    )
-    customers = _facts(
-        _text_only(_merge_unique(business, about, governance)),
-        KEYWORDS["customer"],
-        "材料中暂未抽出可引用的客户结构。",
+        "材料中暂未抽出可引用的收入、利润或费用信息。",
         count=2,
         used_ids=used_ids,
     )
     cashflow = _facts(
-        _text_only(_merge_unique(risks, financials)),
-        ["现金流量净额", "销售回款", "持续为负", "研发投入", "人员支出"],
-        "材料中暂未抽出可引用的现金流信息。",
+        _merge_unique(financials, risks, disclosure_view),
+        ["现金流量净额", "经营活动", "应收账款", "存货", "回款", "亏损"],
+        "材料中暂未抽出可引用的现金流、回款或资金占用信息。",
+        count=2,
+        used_ids=used_ids,
+    )
+    proceeds_fact = _facts(
+        _merge_unique(proceeds, capability_view),
+        KEYWORDS["proceeds"] + KEYWORDS["technology"],
+        "材料中暂未抽出可引用的募投方向。",
         count=2,
         used_ids=used_ids,
     )
     risk = _facts(
-        risks,
+        _merge_unique(risks, disclosure_view),
         KEYWORDS["risk"],
         "材料中暂未抽出可引用的风险因素。",
         count=3,
         used_ids=used_ids,
     )
-    proceeds_fact = _facts(
-        proceeds,
-        KEYWORDS["proceeds"],
-        "材料中暂未抽出可引用的募投方向。",
-        count=2,
-        used_ids=used_ids,
-    )
     governance_fact = _facts(
-        _merge_unique(governance, related_party),
+        _merge_unique(governance, related_party, disclosure_view),
         KEYWORDS["governance"],
-        "材料中暂未抽出可引用的治理和关联交易材料。",
+        "材料中暂未抽出可引用的治理或关联交易信息。",
         count=2,
         used_ids=used_ids,
     )
-    worldview_product = _facts(
-        _text_only(business),
-        KEYWORDS["product"] + KEYWORDS["scenario"] + ["入口", "终端", "场景", "交付"],
-        "材料中暂未抽出可引用的产品入口。",
+    disclosure_signal = _facts(
+        disclosure_view,
+        KEYWORDS["disclosure_gap"] + KEYWORDS["channel"],
+        "当前证据包未直接抽出渠道缺口或披露空白；这一项保留为后续核查任务。",
         count=2,
+        used_ids=used_ids,
     )
-    worldview_competition = _facts(
-        _text_only(_merge_unique(business, about)),
-        KEYWORDS["technology"] + KEYWORDS["customer"],
-        "材料中暂未抽出可引用的竞争力证明。",
-        count=3,
-    )
-    worldview_growth = _facts(
-        _text_only(_merge_unique(financials, risks)),
-        KEYWORDS["financial"] + ["应收账款", "存货", "资金"],
-        "材料中暂未抽出可引用的增长压力。",
-        count=3,
-    )
-    worldview_risk = _facts(
-        risks,
-        KEYWORDS["risk"],
-        "材料中暂未抽出可引用的风险和治理材料。",
+    reader_evidence = _facts(
+        reader_view,
+        KEYWORDS["product"] + KEYWORDS["customer"] + KEYWORDS["financial"] + KEYWORDS["risk"],
+        "材料中暂未抽出足够支撑读者分层结论的证据。",
         count=3,
     )
 
@@ -446,122 +644,103 @@ def _report_body(
         _report_title(company_name),
         "",
         (
-            "读这份招股书，最有价值的入口不是先给出一个估值判断，而是把一个“对话式人工智能”公司拆成几个能被验证的问题："
-            "它到底卖什么，进入了哪些终端场景，收入增长靠什么支撑，研发投入有没有变成产品壁垒，以及风险是否足以改变前面的叙事。"
+            "这份招股书的读法，可以从一个第一信号进入。第一信号指产品表现、"
+            "渠道动作、增长叙事或披露空白中出现的不协调现象；它会把问题收束为："
+            "业务目标需要哪些能力，招股书披露的资源是否支撑这些能力。"
             f"{identity}"
         ),
         "",
-        f"## 一、{_view_title('company_and_industry', '公司介绍与行业概况')}",
+        f"## 一、{_view_title('signal_and_question', '现象入口与核心问题')}",
         "",
         (
-            "先看业务边界。"
+            "先把阅读对象压缩成一个可验证问题。"
             f"{identity} "
-            "这个定位把阅读范围收得很窄：重点不是泛泛讨论大模型，也不是把 AI 当成一个概念标签，而是看对话式 AI、端侧智能和智能终端之间能否形成可交付、可复制、可收费的产品体系。"
+            "这条主营业务线索决定了后续阅读顺序：先看产品进入哪些真实场景，再看"
+            "这些场景需要哪些技术、渠道、供应链、服务和组织能力。"
         ),
         "",
         (
-            "产品体系是理解它的第一把钥匙。"
+            "产品和场景提供第一组证据。"
             f"{product} "
-            "这意味着招股书里的“AI”不是单一算法能力，而是软件、芯片、模组、终端和定制交付共同组成的产品网络。读到这里，问题已经从“技术是否先进”转成了“产品是否能进入足够多、足够稳定的真实场景”。"
+            "产品描述的价值在于限定能力要求；一个产品越依赖持续运营、客户适配和"
+            "售后服务，越需要继续检查团队经验、研发投入和渠道质量。"
         ),
         "",
         (
-            "这些真实场景主要落在智慧出行、智慧办公和智慧物联。"
-            f"{scenarios} "
-            "三个场景的商业含义并不相同：车载语音更看重前装导入和整车厂合作，会议办公更接近自主品牌硬件和渠道能力，智能家居、机器人、穿戴设备则考验多品类适配和供应链协同。"
-        ),
-        "",
-        (
-            "行业概况部分的高价值信息，在于它给了一个从“技术热词”回到“市场空间”的桥。"
+            "行业趋势只能提供问题入口。"
             f"{industry} "
-            "这些数据不应该被直接读成乐观结论，但它们说明对话式 AI 的增长不是只发生在聊天机器人里，而是在家居、机器人、车载、办公和其他终端入口里被重新分配。"
+            "趋势成立会放大研究价值，传导到单家公司仍然需要产品可信度、客户验证、"
+            "费用效率和交付稳定性共同支撑。"
+        ),
+        "",
+        f"## 二、{_view_title('business_capability_chain', '业务、能力与资源匹配')}",
+        "",
+        (
+            "能力链的核心是把产品目标追到资源配置。"
+            f"{technology} {talent} "
+            "研发、人员和技术名称只有进入产品、客户和交付环节后，才会变成可验证的"
+            "竞争力。"
         ),
         "",
         (
-            "产业链位置也值得单独看。"
-            f"{_facts(company_view, ['产业链', '系统级公司', '软硬件适配', '部署实施', '场景化解决方案'], '材料中暂未抽出可引用的产业链定位。', count=2)} "
-            "如果一家企业只是提供单点模型能力，它更容易被上游大模型或下游集成商挤压；如果它能把模型、芯片、终端、场景和交付串起来，价值位置就更接近系统级解决方案提供者。"
+            "客户和渠道负责验证能力是否落地。"
+            f"{channel_customer} "
+            "客户名单、销售模式和渠道结构能够说明产品是否被真实采用，也会影响账期、"
+            "回款、议价能力和收入质量。"
         ),
         "",
         (
-            "技术能力在这里不是孤立装饰，而是商业化的前置条件。"
-            f"{technology} "
-            "端侧部署、离线可用、低时延、隐私保护、多芯片适配这些能力，只有和客户场景绑定后才有商业意义。换句话说，技术壁垒不是写在技术名词里，而是写在客户迁移成本和交付稳定性里。"
-        ),
-        "",
-        f"## 二、{_view_title('personal_investment', '个人投资视角')}",
-        "",
-        (
-            "从个人投资者或产品使用者的角度，第一件事不是问“AI 赛道能不能涨”，而是问产品是否值得信任。"
-            f"{personal_product} "
-            "这些证据至少说明产品已经进入汽车、办公、家居、机器人等具体终端，而不是只停留在概念展示。对个人读者来说，这会提高继续研究的价值。"
-        ),
-        "",
-        (
-            "第二件事是判断它更像重研发的技术公司，还是重营销的概念公司。"
-            f"{rd} {sales} "
-            "研发投入高并不自动等于好公司，因为它也会压低利润和现金流；销售费用上升也不自动等于坏事，因为自主品牌产品放量阶段本来需要市场投入。真正要看的，是研发和销售费用最后有没有变成可复用产品、客户粘性和收入质量。"
-        ),
-        "",
-        (
-            "收入增长提供了一个正向线索，但这个线索必须和亏损、现金流一起读。"
+            "财务数据说明能力链消耗了多少资源。"
             f"{revenue} {cashflow} "
-            "如果只看收入，会觉得业务正在扩张；如果把经营现金流和亏损放进来，就会看到另一面：增长仍然需要研发、人员和市场投入持续支撑，短期内未必能自然转化为舒服的利润和现金流。"
+            "收入增长需要和费用、现金流、应收账款、存货一起读，原因是增长会占用资金、"
+            "组织和交付资源。"
         ),
         "",
         (
-            "客户结构决定了这种增长的含金量。"
-            f"{customers} "
-            "客户名单能证明产品被真实场景采用，但客户集中度、账期、回款方式和议价能力会影响收入质量。个人读者不需要像机构一样建复杂模型，但至少要形成一个朴素判断：好客户可以证明产品，过度依赖客户也可能反过来限制公司。"
-        ),
-        "",
-        (
-            "募投项目可以看作管理层对未来产品路线的押注。"
+            "募投项目体现管理层想补足的能力。"
             f"{proceeds_fact} "
-            "如果募投资金继续围绕智慧出行、智慧办公、智慧物联和 DUI 中台展开，它和主营业务的连接是清楚的；但投资者仍要继续追问项目建设期费用、产能消化、研发成果转化和收入承接。"
+            "募投方向和主营业务连接越清晰，越值得继续跟踪项目建设、研发成果转化和"
+            "收入承接。"
         ),
         "",
+        f"## 三、{_view_title('disclosure_gap_and_risk', '披露空白与风险约束')}",
+        "",
         (
-            "个人投资视角下，最需要提前放在桌面上的不是乐观故事，而是风险会怎样改变故事。"
+            "风险因素决定结论强度。"
             f"{risk} "
-            "这些风险让这份材料不能被读成单纯的 AI 成长叙事。更合理的阶段性判断是：产品和行业线索值得继续跟踪，但盈利质量、现金流改善、客户分散度和研发转化效率还需要后续持续验证。"
-        ),
-        "",
-        f"## 三、{_view_title('cognitive_worldview', '认知世界的方式')}",
-        "",
-        (
-            "这份招股书真正有意思的地方，是它示范了一个行业如何被拆开。第一步不是问“人工智能是不是未来”，而是问技术通过什么入口进入物理世界。"
-            f"{worldview_product} "
-            "一旦把入口落到车、会议室、教室、家居、机器人和穿戴设备，抽象技术就变成了具体产业问题。"
+            "风险的读法是追问它影响哪一段能力链：产品可靠性、客户关系、供应链、"
+            "现金流、费用效率或治理稳定性。"
         ),
         "",
         (
-            "第二步，是看企业怎样证明竞争力。"
-            f"{worldview_competition} "
-            "招股书里的竞争力证明通常不是单一维度：技术要有体系，产品要能交付，客户要能验证，收入要能持续，风险要能解释。任何一个环节单独漂亮，都不足以支撑完整判断。"
+            "披露空白也有阅读价值。"
+            f"{disclosure_signal} "
+            "重要渠道、平台、客户或产品线缺席时，安全写法是把它标记为核查任务，"
+            "再用公告、店铺数据、产品评价或行业资料补证。"
         ),
         "",
         (
-            "第三步，是把增长和压力放在同一张图里。"
-            f"{worldview_growth} "
-            "商业世界里，增长常常不是免费的。收入扩大可能伴随存货、应收账款、人员、研发、营销和供应链压力；技术公司尤其如此。读招股书的价值，就是训练自己不要只看增长曲线，也要看增长背后的资金占用和组织成本。"
+            "治理和关联交易提供另一组边界。"
+            f"{governance_fact} "
+            "这类信息会影响利益分配、内部控制和长期经营稳定性，也会限制单纯从"
+            "产品或行业趋势推出强结论。"
+        ),
+        "",
+        f"## 四、{_view_title('reader_action_map', '不同读者的可用结论')}",
+        "",
+        (
+            "同一份招股书，对不同读者的价值来自同一组证据的再翻译。"
+            f"{reader_evidence} "
+            "投资人关注增长叙事能否被现金流和风险承接；行业从业者关注渠道、客户、"
+            "费用和产品数据；技术或产品人关注能力缺口和组织储备；消费者关注产品"
+            "可信度和交付风险。"
         ),
         "",
         (
-            "第四步，是理解风险不是附录，而是理解商业模式的一部分。"
-            f"{worldview_risk} {governance_fact} "
-            "风险因素、治理安排和关联交易承诺，不能替代经营事实，但能告诉读者哪些地方最容易出问题：现金流、客户集中、供应链价格、市场竞争、内部控制和利益输送空间。"
-        ),
-        "",
-        (
-            "把这套方法迁移到其他公司，可以形成一个很实用的阅读顺序：先找产品入口，再找行业空间，再看客户验证，然后检查收入质量、研发效率、现金流和风险暴露。"
-            "这比直接问“是不是好公司”更稳，因为它把一个模糊判断拆成了可以反复回到原文核查的问题。"
-        ),
-        "",
-        (
-            "所以，这篇阅读的结论不是一个买卖建议，而是一种更清醒的观察方式："
-            "思必驰的材料已经能支撑一条“端侧智能进入多类终端场景”的主线，行业空间、客户场景和研发投入给了继续研究的理由；"
-            "亏损、现金流、销售投入、客户结构和竞争压力则提醒读者，这条主线还没有自然变成确定性。"
+            f"对 {company_name} 的阶段性结论是：先用第一信号提出问题，再用主营业务、"
+            "产品场景、能力储备、客户渠道、财务质量、募投方向和风险因素逐层核查。"
+            "这条链路能保留招股书的证据边界，也能把阅读结果转化为继续研究、业务"
+            "参照、职业判断和产品判断。"
         ),
         "",
     ]
