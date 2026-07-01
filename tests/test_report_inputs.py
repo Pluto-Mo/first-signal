@@ -3,6 +3,14 @@ from ipo_evidence.models import Block
 from ipo_evidence.report_inputs import build_report_inputs
 
 
+EXPECTED_OUTLINE = [
+    "signal_and_question",
+    "business_capability_chain",
+    "disclosure_gap_and_risk",
+    "reader_action_map",
+]
+
+
 def test_build_report_inputs_groups_evidence_by_reading_view():
     packet = build_evidence_packet(
         doc_id="doc_test",
@@ -17,7 +25,7 @@ def test_build_report_inputs_groups_evidence_by_reading_view():
             Block(
                 block_id="B-000003",
                 page_number=3,
-                text="报告期内，公司经销模式销售的主要产品为 AI 芯片及智慧办公领域的 AI 硬件产品。",
+                text="报告期内，公司经销模式销售的主要产品为智能硬件产品。",
                 section_path=["业务与技术", "主要产品或服务情况"],
             ),
         ],
@@ -28,12 +36,8 @@ def test_build_report_inputs_groups_evidence_by_reading_view():
 
     assert report_inputs["doc_id"] == "doc_test"
     assert report_inputs["company_name"] == "测试股份有限公司"
-    assert report_inputs["outline"] == [
-        "company_and_industry",
-        "personal_investment",
-        "cognitive_worldview",
-    ]
-    assert report_inputs["section_groups"][0]["section_key"] == "company_and_industry"
+    assert report_inputs["outline"] == EXPECTED_OUTLINE
+    assert report_inputs["section_groups"][0]["section_key"] == "signal_and_question"
 
 
 def test_build_report_inputs_keeps_dispatch_view_lightweight():
@@ -54,8 +58,8 @@ def test_build_report_inputs_keeps_dispatch_view_lightweight():
     report_inputs = build_report_inputs("doc_test", "测试股份有限公司", packet)
 
     section = report_inputs["section_groups"][0]
-    assert section["title"] == "公司介绍与行业概况"
-    assert section["prompt_slot"] == "company_and_industry"
+    assert section["title"] == "现象入口与核心问题"
+    assert section["prompt_slot"] == "signal_and_question"
     assert section["focus_points"] != []
     assert section["constraints"] != []
     assert section["output_order"] == 1
@@ -77,7 +81,7 @@ def test_build_report_inputs_uses_evidence_refs_not_evidence_copies():
             Block(
                 block_id="B-000003",
                 page_number=3,
-                text="报告期内，公司经销模式销售的主要产品为 AI 芯片及智慧办公领域的 AI 硬件产品。",
+                text="报告期内，公司经销模式销售的主要产品为智能硬件产品。",
                 section_path=["业务与技术", "主要产品或服务情况"],
             ),
         ],
