@@ -47,7 +47,7 @@ def _string_list(value: Any) -> list[str]:
 
 def _rank_value(ref: dict[str, Any]) -> int:
     rank = ref.get("rank", 99)
-    if isinstance(rank, int) and rank >= 0:
+    if type(rank) is int and rank >= 0:
         return rank
     return 99
 

@@ -155,6 +155,13 @@ def _view_title(section_key: str, fallback: str) -> str:
     return title if isinstance(title, str) and title else fallback
 
 
+def _rank_value(ref: dict[str, Any]) -> int:
+    rank = ref.get("rank", 99)
+    if type(rank) is int and rank >= 0:
+        return rank
+    return 99
+
+
 def _items_for_input_group(
     group: dict[str, Any],
     item_index: dict[str, tuple[int, EvidenceItem]],
@@ -163,11 +170,15 @@ def _items_for_input_group(
     if not isinstance(refs, list):
         return []
     items: list[tuple[int, EvidenceItem]] = []
-    for ref in sorted(refs, key=lambda ref: ref.get("rank", 99) if isinstance(ref, dict) else 99):
+    seen_evidence_ids: set[str] = set()
+    for ref in sorted(refs, key=lambda ref: _rank_value(ref) if isinstance(ref, dict) else 99):
         if not isinstance(ref, dict):
             continue
         evidence_id = ref.get("evidence_id")
         if isinstance(evidence_id, str) and evidence_id in item_index:
+            if evidence_id in seen_evidence_ids:
+                continue
+            seen_evidence_ids.add(evidence_id)
             items.append(item_index[evidence_id])
     return items
 

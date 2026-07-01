@@ -80,6 +80,18 @@ def test_generate_section_drafts_handles_invalid_rank_unknown_and_duplicate_refs
                 quote="报告期内，公司 AI 硬件产品收入占比较高。",
                 quality_status=QualityStatus.safe_to_use,
             ),
+            EvidenceItem(
+                evidence_id="E-003",
+                canonical_section="business",
+                claim_summary="公司持续加大核心技术研发投入。",
+                source_type="text_quote",
+                source_file="sample.pdf",
+                page_number=4,
+                block_id="B-003",
+                section_path=["业务与技术"],
+                quote="公司持续加大核心技术研发投入。",
+                quality_status=QualityStatus.safe_to_use,
+            ),
         ],
     )
     report_inputs = {
@@ -91,6 +103,7 @@ def test_generate_section_drafts_handles_invalid_rank_unknown_and_duplicate_refs
                     {"evidence_id": "E-001", "rank": "1"},
                     {"evidence_id": "E-002", "rank": 2},
                     {"evidence_id": "E-001", "rank": -1},
+                    {"evidence_id": "E-003", "rank": True},
                     {"evidence_id": "E-999", "rank": 1},
                 ],
             }
@@ -99,7 +112,7 @@ def test_generate_section_drafts_handles_invalid_rank_unknown_and_duplicate_refs
 
     drafts = generate_section_drafts(packet, report_inputs)
 
-    assert drafts[0].citation_ids == ["C-002", "C-001"]
-    assert drafts[0].internal_trace.citation_ids == ["C-002", "C-001"]
-    assert drafts[0].internal_trace.evidence_ids == ["E-002", "E-001"]
-    assert drafts[0].internal_trace.fact_count == 2
+    assert drafts[0].citation_ids == ["C-002", "C-001", "C-003"]
+    assert drafts[0].internal_trace.citation_ids == ["C-002", "C-001", "C-003"]
+    assert drafts[0].internal_trace.evidence_ids == ["E-002", "E-001", "E-003"]
+    assert drafts[0].internal_trace.fact_count == 3

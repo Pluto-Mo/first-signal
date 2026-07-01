@@ -1,7 +1,7 @@
 from ipo_evidence.citation_layer import build_citations
 from ipo_evidence.evidence import build_evidence_packet
 from ipo_evidence.models import Block, EvidenceItem, EvidencePacket, QualityStatus, TableObject
-from ipo_evidence.report_generator import generate_report
+from ipo_evidence.report_generator import _items_for_input_group, generate_report
 
 
 def test_report_contains_citation_markers_and_citation_json():
@@ -243,6 +243,64 @@ def test_generate_report_uses_report_inputs_section_groups():
     assert "个人投资视角" in draft
     assert "产品收入结构表显示：产品：智能控制器；占比：45.2%" in draft
     assert "[C-001]" in draft
+
+
+def test_generate_report_handles_invalid_rank_unknown_and_duplicate_input_refs():
+    packet = EvidencePacket(
+        doc_id="doc_test",
+        items=[
+            EvidenceItem(
+                evidence_id="E-001",
+                canonical_section="about_company",
+                claim_summary="公司主要从事智能硬件产品的研发、生产和销售。",
+                source_type="text_quote",
+                source_file="测试股份有限公司招股说明书.pdf",
+                page_number=2,
+                block_id="B-000002",
+                section_path=["发行人基本情况"],
+                quote="公司主要从事智能硬件产品的研发、生产和销售。",
+                quality_status=QualityStatus.safe_to_use,
+            ),
+            EvidenceItem(
+                evidence_id="E-002",
+                canonical_section="financials",
+                claim_summary="报告期内公司营业收入持续增长。",
+                source_type="text_quote",
+                source_file="测试股份有限公司招股说明书.pdf",
+                page_number=3,
+                block_id="B-000003",
+                section_path=["财务会计信息"],
+                quote="报告期内公司营业收入持续增长。",
+                quality_status=QualityStatus.safe_to_use,
+            ),
+        ],
+    )
+    report_inputs = {
+        "doc_id": "doc_test",
+        "company_name": "测试股份有限公司",
+        "section_groups": [
+            {
+                "section_key": "company_and_industry",
+                "title": "公司介绍与行业概况",
+                "evidence_refs": [
+                    {"evidence_id": "E-001", "rank": "1"},
+                    {"evidence_id": "E-002", "rank": 2},
+                    {"evidence_id": "E-001", "rank": -1},
+                    {"evidence_id": "E-999", "rank": 1},
+                ],
+            }
+        ],
+    }
+
+    draft = generate_report("测试股份有限公司", packet, report_inputs)
+    input_items = _items_for_input_group(
+        report_inputs["section_groups"][0],
+        {item.evidence_id: (index, item) for index, item in enumerate(packet.items, start=1)},
+    )
+
+    assert "[C-001]" in draft
+    assert "[C-002]" in draft
+    assert [item.evidence_id for _, item in input_items] == ["E-002", "E-001"]
 
 
 def test_generate_report_avoids_internal_system_wording():
