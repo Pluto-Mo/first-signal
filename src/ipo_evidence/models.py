@@ -170,4 +170,23 @@ class ReaderBundle(BaseModel):
     citations: list[ReaderCitation] = Field(default_factory=list)
 
 
+class InternalTrace(BaseModel):
+    section_key: str
+    skill_refs: list[str] = Field(default_factory=list)
+    prompt_slot: str
+    evidence_ids: list[str] = Field(default_factory=list)
+    citation_ids: list[str] = Field(default_factory=list)
+    fact_count: int = 0
+    missing_contract_fields: list[str] = Field(default_factory=list)
+
+
+class SectionDraft(BaseModel):
+    section_key: str
+    title: str
+    section_role: str = "main"
+    body: str
+    citation_ids: list[str] = Field(default_factory=list)
+    internal_trace: InternalTrace
+
+
 JsonDict = dict[str, Any]
