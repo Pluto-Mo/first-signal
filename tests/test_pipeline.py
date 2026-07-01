@@ -55,6 +55,11 @@ def test_run_one_creates_document_package(tmp_path: Path):
     assert analysis_log["doc_id"] == doc_id
     assert "skipped_or_merged" in analysis_log
     report_text = (package / "report.md").read_text(encoding="utf-8")
+    paragraphs = [part.strip() for part in report_text.split("\n\n") if part.strip()]
+    assert all(len(paragraph) < 1200 for paragraph in paragraphs)
+    assert report_text.count("{'") == 0
+    assert "对应数据为" not in report_text
+    assert report_text.count("[C-") <= 50
     assert "本文基于招股说明书中已抽取的可引用证据" in report_text
     assert "读这份招股书" not in report_text
     assert "公司介绍与行业概况" in report_text
@@ -156,6 +161,39 @@ def test_regenerate_report_rewrites_report_and_citations(tmp_path: Path):
     assert reader_bundle["report_title"] == "测试股份有限公司招股书长篇阅读"
     assert web_index["doc_id"] == doc_id
     assert web_index["company_name"] == "测试股份有限公司"
+
+
+def test_regenerate_report_does_not_dump_large_report_inputs(tmp_path: Path):
+    inbox = tmp_path / "inbox"
+    docs = tmp_path / "docs"
+    inbox.mkdir()
+    pdf = inbox / "测试股份有限公司招股说明书.pdf"
+    pdf.write_bytes(b"%PDF-1.4\nsample")
+
+    doc_id = run_one(
+        pdf_path=pdf,
+        docs_dir=docs,
+        fixture_path=Path("tests/fixtures/sample_prospectus.txt"),
+    )
+
+    package = docs / doc_id
+    report_inputs = read_json(package / "report_inputs.json")
+    first_group = report_inputs["section_groups"][0]
+    original_refs = list(first_group["evidence_refs"])
+    first_group["evidence_refs"] = original_refs * 20
+    (package / "report_inputs.json").write_text(
+        json.dumps(report_inputs, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    regenerate_report(doc_id, docs)
+
+    report_text = (package / "report.md").read_text(encoding="utf-8")
+    paragraphs = [part.strip() for part in report_text.split("\n\n") if part.strip()]
+    assert all(len(paragraph) < 1200 for paragraph in paragraphs)
+    assert report_text.count("[C-") <= 50
+    assert "对应数据为" not in report_text
+    assert "{'" not in report_text
 
 
 def test_regenerate_report_logs_weak_sections_without_adding_report_section(tmp_path: Path):

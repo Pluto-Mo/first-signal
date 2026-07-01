@@ -45,7 +45,8 @@ def test_generate_section_drafts_uses_section_evidence_refs_and_trace():
     assert len(drafts) == 1
     assert drafts[0].section_key == "company_and_industry"
     assert drafts[0].title == "公司介绍与行业概况"
-    assert drafts[0].body == "公司主要从事智能硬件产品的研发、生产和销售。[C-001]"
+    assert "阅读这一节" in drafts[0].body
+    assert "公司主要从事智能硬件产品的研发、生产和销售。[C-001]" in drafts[0].body
     assert drafts[0].citation_ids == ["C-001"]
     assert drafts[0].internal_trace.skill_refs == ["business_goal_decompose"]
     assert drafts[0].internal_trace.evidence_ids == ["E-001"]
@@ -113,12 +114,13 @@ def test_generate_section_drafts_handles_invalid_rank_unknown_and_duplicate_refs
 
     drafts = generate_section_drafts(packet, report_inputs)
 
-    assert drafts[0].citation_ids == ["C-002", "C-001", "C-003"]
-    assert drafts[0].internal_trace.citation_ids == ["C-002", "C-001", "C-003"]
-    assert drafts[0].internal_trace.evidence_ids == ["E-002", "E-001", "E-003"]
+    assert drafts[0].citation_ids == ["C-001", "C-002", "C-003"]
+    assert drafts[0].internal_trace.citation_ids == ["C-001", "C-002", "C-003"]
+    assert drafts[0].internal_trace.evidence_ids == ["E-001", "E-002", "E-003"]
     assert drafts[0].internal_trace.evidence_quality_statuses == [
         QualityStatus.safe_to_use,
         QualityStatus.safe_to_use,
         QualityStatus.safe_to_use,
     ]
     assert drafts[0].internal_trace.fact_count == 3
+    assert drafts[0].body.count("[C-") == 3

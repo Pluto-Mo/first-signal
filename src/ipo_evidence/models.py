@@ -179,6 +179,7 @@ class InternalTrace(BaseModel):
     evidence_quality_statuses: list[QualityStatus] = Field(default_factory=list)
     fact_count: int = 0
     missing_contract_fields: list[str] = Field(default_factory=list)
+    readability_warnings: list[str] = Field(default_factory=list)
 
 
 class SectionDraft(BaseModel):

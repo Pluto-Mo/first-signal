@@ -3,10 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from ipo_evidence.models import EvidenceItem, EvidencePacket, InternalTrace, SectionDraft
-
-
-def _citation_id(index: int) -> str:
-    return f"C-{index:03d}"
+from ipo_evidence.section_writer import write_section
 
 
 def _item_index(packet: EvidencePacket) -> dict[str, tuple[int, EvidenceItem]]:
@@ -23,20 +20,6 @@ def _section_groups(report_inputs: dict[str, Any] | None) -> list[dict[str, Any]
     if not isinstance(groups, list):
         return []
     return [group for group in groups if isinstance(group, dict)]
-
-
-def _clean_sentence(text: str) -> str:
-    return " ".join(text.replace("\u3000", " ").split()).rstrip("。；;，,") + "。"
-
-
-def _body_for_items(items: list[tuple[int, EvidenceItem]]) -> tuple[str, list[str]]:
-    sentences: list[str] = []
-    citation_ids: list[str] = []
-    for index, item in items:
-        citation_id = _citation_id(index)
-        citation_ids.append(citation_id)
-        sentences.append(f"{_clean_sentence(item.claim_summary)}[{citation_id}]")
-    return " ".join(sentences), citation_ids
 
 
 def _string_list(value: Any) -> list[str]:
@@ -81,7 +64,6 @@ def generate_section_drafts(
                     seen_evidence_ids.add(evidence_id)
                     items.append(indexed[evidence_id])
 
-        body, citation_ids = _body_for_items(items)
         contract = group.get("output_contract")
         if isinstance(contract, dict):
             required = _string_list(contract.get("requires"))
@@ -94,23 +76,37 @@ def generate_section_drafts(
         ]
         prompt_slot = group.get("prompt_slot", "narrative_section")
         section_role = group.get("section_role", "main")
+        skill_refs = _string_list(group.get("skill_refs"))
+        normalized_prompt_slot = (
+            prompt_slot if isinstance(prompt_slot, str) else "narrative_section"
+        )
+        write_result = write_section(
+            section_key=section_key,
+            title=title,
+            skill_refs=skill_refs,
+            prompt_slot=normalized_prompt_slot,
+            indexed_items=items,
+        )
         trace = InternalTrace(
             section_key=section_key,
-            skill_refs=_string_list(group.get("skill_refs")),
-            prompt_slot=prompt_slot if isinstance(prompt_slot, str) else "narrative_section",
-            evidence_ids=[item.evidence_id for _, item in items],
-            citation_ids=citation_ids,
-            evidence_quality_statuses=[item.quality_status for _, item in items],
-            fact_count=len(items),
+            skill_refs=skill_refs,
+            prompt_slot=normalized_prompt_slot,
+            evidence_ids=[item.evidence_id for _, item in write_result.selected_items],
+            citation_ids=write_result.citation_ids,
+            evidence_quality_statuses=[
+                item.quality_status for _, item in write_result.selected_items
+            ],
+            fact_count=len(write_result.selected_items),
             missing_contract_fields=missing,
+            readability_warnings=write_result.readability_warnings,
         )
         drafts.append(
             SectionDraft(
                 section_key=section_key,
                 title=title,
                 section_role=section_role if isinstance(section_role, str) else "main",
-                body=body,
-                citation_ids=citation_ids,
+                body=write_result.body,
+                citation_ids=write_result.citation_ids,
                 internal_trace=trace,
             )
         )

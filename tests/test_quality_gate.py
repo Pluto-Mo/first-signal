@@ -205,3 +205,61 @@ def test_quality_gate_falls_back_to_two_for_invalid_min_fact_count():
     assert decisions[0].section_key == "platform_dependency"
     assert decisions[0].action == "merge"
     assert decisions[0].reason == "证据数量 1 低于最低要求 2。"
+
+
+def test_quality_gate_logs_section_with_raw_dict_literal():
+    draft = _draft("company_and_industry", 3, [QualityStatus.safe_to_use] * 3)
+    draft.body = "公司符合科创属性要求中，对应数据为：{'项目': '营业收入'}。[C-001]"
+    draft.internal_trace.readability_warnings = ["contains_raw_data_literal"]
+
+    decisions = apply_quality_gate(
+        [draft],
+        {"company_and_industry": {"min_fact_count": 2}},
+    )
+
+    assert decisions[0].action == "log_only"
+    assert "可读性" in decisions[0].reason
+    assert decisions[0].suggested_next_steps == ["重写 section draft，移除原始表格字面量。"]
+
+
+def test_quality_gate_derives_raw_dict_literal_warning_from_body():
+    draft = _draft("company_and_industry", 3, [QualityStatus.safe_to_use] * 3)
+    draft.body = "公司符合科创属性要求中，对应数据为：{'项目': '营业收入'}。[C-001]"
+    draft.internal_trace.readability_warnings = []
+
+    decisions = apply_quality_gate(
+        [draft],
+        {"company_and_industry": {"min_fact_count": 2}},
+    )
+
+    assert decisions[0].action == "log_only"
+    assert "可读性" in decisions[0].reason
+
+
+def test_quality_gate_logs_section_with_too_many_citations():
+    draft = _draft("company_and_industry", 20, [QualityStatus.safe_to_use] * 20)
+    draft.body = " ".join(f"事实{i}。[C-{i:03d}]" for i in range(1, 21))
+    draft.internal_trace.readability_warnings = ["too_many_citations"]
+
+    decisions = apply_quality_gate(
+        [draft],
+        {"company_and_industry": {"min_fact_count": 2}},
+    )
+
+    assert decisions[0].action == "log_only"
+    assert "可读性" in decisions[0].reason
+    assert decisions[0].suggested_next_steps == ["压缩 section draft，减少引用密度。"]
+
+
+def test_quality_gate_derives_too_many_citations_warning_from_body():
+    draft = _draft("company_and_industry", 20, [QualityStatus.safe_to_use] * 20)
+    draft.body = " ".join(f"事实{i}。[C-{i:03d}]" for i in range(1, 21))
+    draft.internal_trace.readability_warnings = []
+
+    decisions = apply_quality_gate(
+        [draft],
+        {"company_and_industry": {"min_fact_count": 2}},
+    )
+
+    assert decisions[0].action == "log_only"
+    assert decisions[0].suggested_next_steps == ["压缩 section draft，减少引用密度。"]

@@ -49,6 +49,60 @@ def _strongest_strength(statuses: list[QualityStatus]) -> EvidenceStrength | Non
     return max((_QUALITY_STRENGTH[status] for status in statuses), key=lambda strength: _STRENGTH_RANK[strength])
 
 
+def _readability_reason(warnings: list[str]) -> str | None:
+    if not warnings:
+        return None
+    labels = {
+        "contains_raw_data_literal": "包含原始表格字面量",
+        "paragraph_too_long": "段落过长",
+        "too_many_citations": "引用过密",
+        "section_too_long": "section 过长",
+    }
+    joined = "、".join(labels.get(warning, warning) for warning in warnings)
+    return f"section draft 可读性未达标：{joined}。"
+
+
+def _body_readability_warnings(body: str) -> list[str]:
+    warnings: list[str] = []
+    if "{'" in body or "对应数据为" in body:
+        warnings.append("contains_raw_data_literal")
+    paragraphs = [paragraph for paragraph in body.split("\n\n") if paragraph.strip()]
+    if any(len(paragraph) > 900 for paragraph in paragraphs):
+        warnings.append("paragraph_too_long")
+    if body.count("[C-") > 14:
+        warnings.append("too_many_citations")
+    if len(body) > 6500:
+        warnings.append("section_too_long")
+    return warnings
+
+
+def _merged_readability_warnings(draft: SectionDraft) -> list[str]:
+    warnings: list[str] = []
+    seen: set[str] = set()
+    for warning in [
+        *draft.internal_trace.readability_warnings,
+        *_body_readability_warnings(draft.body),
+    ]:
+        if warning in seen:
+            continue
+        warnings.append(warning)
+        seen.add(warning)
+    return warnings
+
+
+def _readability_next_steps(warnings: list[str]) -> list[str]:
+    steps_by_warning = {
+        "contains_raw_data_literal": "重写 section draft，移除原始表格字面量。",
+        "too_many_citations": "压缩 section draft，减少引用密度。",
+        "paragraph_too_long": "拆分或压缩过长段落。",
+        "section_too_long": "压缩 section draft，保留核心证据。",
+    }
+    return [
+        steps_by_warning.get(warning, "重写 section draft，移除不可读内容。")
+        for warning in warnings
+    ]
+
+
 def _effective_fact_count(draft: SectionDraft, policy: dict[str, Any]) -> int:
     statuses = draft.internal_trace.evidence_quality_statuses
     if not statuses:
@@ -67,6 +121,26 @@ def apply_quality_gate(
         policy = policies_by_section.get(draft.section_key, {})
         min_fact_count = _min_fact_count(policy)
         min_strength = _min_strength(policy)
+        readability_warnings = _merged_readability_warnings(draft)
+        readability_reason = _readability_reason(readability_warnings)
+        if readability_reason:
+            decisions.append(
+                QualityGateDecision(
+                    section_key=draft.section_key,
+                    action="log_only",
+                    reason=readability_reason,
+                    title=draft.title,
+                    evidence_count=draft.internal_trace.fact_count,
+                    min_fact_count=min_fact_count,
+                    strength=_strongest_strength(draft.internal_trace.evidence_quality_statuses),
+                    required_strength=min_strength,
+                    needed_evidence=[],
+                    suggested_next_step="重写 section draft，移除不可读内容。",
+                    suggested_next_steps=_readability_next_steps(readability_warnings),
+                )
+            )
+            continue
+
         effective_fact_count = _effective_fact_count(draft, policy)
         strength = _strongest_strength(draft.internal_trace.evidence_quality_statuses)
         reason_prefix = (
