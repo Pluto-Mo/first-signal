@@ -1,3 +1,4 @@
+from ipo_evidence.config import load_yaml
 from ipo_evidence.evidence import build_evidence_packet
 from ipo_evidence.models import Block
 from ipo_evidence.report_inputs import build_report_inputs
@@ -55,12 +56,56 @@ def test_build_report_inputs_keeps_dispatch_view_lightweight():
 
     section = report_inputs["section_groups"][0]
     assert section["title"] == "公司介绍与行业概况"
-    assert section["prompt_slot"] == "company_and_industry"
+    assert section["prompt_slot"] == "narrative_section"
     assert section["focus_points"] != []
     assert section["constraints"] != []
     assert section["output_order"] == 1
     assert "quote" not in str(section)
     assert "claim_summary" not in str(section)
+
+
+def test_build_report_inputs_uses_configured_prompt_slots():
+    packet = build_evidence_packet(
+        doc_id="doc_test",
+        source_file="测试股份有限公司招股说明书.pdf",
+        blocks=[],
+        tables=[],
+    )
+
+    report_inputs = build_report_inputs("doc_test", "测试股份有限公司", packet)
+    section_prompt_slots = {
+        section["prompt_slot"] for section in report_inputs["section_groups"]
+    }
+    configured_prompt_slots = {
+        load_yaml("configs/prompts/section_writer.yaml")["prompt_slot"],
+        load_yaml("configs/prompts/stitch_writer.yaml")["prompt_slot"],
+        load_yaml("configs/prompts/citation_checker.yaml")["prompt_slot"],
+    }
+
+    assert section_prompt_slots <= configured_prompt_slots
+
+
+def test_build_report_inputs_uses_base_as_weak_default_preset():
+    packet = build_evidence_packet(
+        doc_id="doc_test",
+        source_file="测试股份有限公司招股说明书.pdf",
+        blocks=[
+            Block(
+                block_id="B-000002",
+                page_number=2,
+                text="公司核心技术包括 AI 芯片、算法、研发平台和专利，主要产品已实现销售。",
+                section_path=["业务与技术"],
+            )
+        ],
+        tables=[],
+    )
+
+    report_inputs = build_report_inputs("doc_test", "测试股份有限公司", packet)
+
+    assert report_inputs["profile_key"] == "base"
+    assert report_inputs["profile_title"] == "通用招股书解读"
+    assert "产品入口" in report_inputs["attention_fields"]
+    assert "quote" not in str(report_inputs["attention_fields"])
 
 
 def test_build_report_inputs_uses_evidence_refs_not_evidence_copies():
@@ -94,3 +139,166 @@ def test_build_report_inputs_uses_evidence_refs_not_evidence_copies():
         "label": "发行人基本情况",
     }
     assert "evidence_ids" not in report_inputs["section_groups"][0]
+
+
+def test_build_report_inputs_adds_architecture_dispatch_contract():
+    packet = build_evidence_packet(
+        doc_id="doc_test",
+        source_file="测试股份有限公司招股说明书.pdf",
+        blocks=[
+            Block(
+                block_id="B-000002",
+                page_number=2,
+                text="公司主要从事智能硬件产品的研发、生产和销售。",
+                section_path=["发行人基本情况"],
+            )
+        ],
+        tables=[],
+    )
+
+    report_inputs = build_report_inputs("doc_test", "测试股份有限公司", packet)
+    section = report_inputs["section_groups"][0]
+
+    assert section["skill_refs"] == [
+        "business_goal_decompose",
+        "capability_match",
+        "reader_value_translate",
+    ]
+    assert section["evidence_policy"] == {
+        "min_fact_count": 2,
+        "min_strength": "medium",
+        "weak_evidence": "merge_into_related_section",
+        "no_evidence": "log_only",
+    }
+    assert section["output_contract"] == {
+        "shape": "narrative_section",
+        "requires": ["core_claim", "evidence_chain", "reader_value"],
+    }
+    assert section["section_role"] == "main"
+
+
+def test_build_report_inputs_defensively_handles_dispatch_contract(monkeypatch):
+    templates = {
+        "fallback_view": {
+            "title": "Fallback View",
+            "prompt_slot": "fallback_view",
+            "focus_points": [],
+            "constraints": [],
+            "output_order": 1,
+            "token_budget": 100,
+            "skill_refs": ["reader_value_translate", "", 123],
+            "evidence_policy": "invalid",
+            "output_contract": None,
+            "section_role": 123,
+            "source_sections": [],
+        },
+        "configured_view": {
+            "title": "Configured View",
+            "prompt_slot": "configured_view",
+            "focus_points": [],
+            "constraints": [],
+            "output_order": 2,
+            "token_budget": 100,
+            "skill_refs": "invalid",
+            "evidence_policy": {"min_fact_count": 1},
+            "output_contract": {
+                "shape": "custom_section",
+                "requires": ["custom_claim"],
+            },
+            "section_role": "supporting",
+            "source_sections": [],
+        },
+        "missing_view": {
+            "title": "Missing View",
+            "prompt_slot": "missing_view",
+            "focus_points": [],
+            "constraints": [],
+            "output_order": 3,
+            "token_budget": 100,
+            "source_sections": [],
+        },
+    }
+    monkeypatch.setattr(
+        "ipo_evidence.report_inputs._input_view_templates", lambda: templates
+    )
+    packet = build_evidence_packet(
+        doc_id="doc_test",
+        source_file="测试股份有限公司招股说明书.pdf",
+        blocks=[],
+        tables=[],
+    )
+
+    report_inputs = build_report_inputs("doc_test", "测试股份有限公司", packet)
+    fallback_section = report_inputs["section_groups"][0]
+    configured_section = report_inputs["section_groups"][1]
+    missing_section = report_inputs["section_groups"][2]
+
+    assert fallback_section["skill_refs"] == ["reader_value_translate"]
+    assert fallback_section["evidence_policy"] == {
+        "min_fact_count": 2,
+        "min_strength": "medium",
+        "weak_evidence": "merge_into_related_section",
+        "no_evidence": "log_only",
+    }
+    assert fallback_section["output_contract"] == {
+        "shape": "narrative_section",
+        "requires": ["core_claim", "evidence_chain", "reader_value"],
+    }
+    assert configured_section["skill_refs"] == []
+    assert configured_section["evidence_policy"] == {"min_fact_count": 1}
+    assert configured_section["output_contract"] == {
+        "shape": "custom_section",
+        "requires": ["custom_claim"],
+    }
+    assert missing_section["skill_refs"] == []
+    assert missing_section["evidence_policy"] == {
+        "min_fact_count": 2,
+        "min_strength": "medium",
+        "weak_evidence": "merge_into_related_section",
+        "no_evidence": "log_only",
+    }
+    assert missing_section["output_contract"] == {
+        "shape": "narrative_section",
+        "requires": ["core_claim", "evidence_chain", "reader_value"],
+    }
+    assert missing_section["section_role"] == "main"
+
+    fallback_section["output_contract"]["requires"].append("mutated_fallback")
+    configured_section["output_contract"]["requires"].append("mutated_config")
+
+    next_report_inputs = build_report_inputs("doc_test", "测试股份有限公司", packet)
+
+    assert next_report_inputs["section_groups"][0]["output_contract"] == {
+        "shape": "narrative_section",
+        "requires": ["core_claim", "evidence_chain", "reader_value"],
+    }
+    assert next_report_inputs["section_groups"][1]["output_contract"] == {
+        "shape": "custom_section",
+        "requires": ["custom_claim"],
+    }
+    assert fallback_section["section_role"] == "main"
+    assert configured_section["section_role"] == "supporting"
+
+
+def test_architecture_config_files_are_loadable():
+    paths = [
+        "configs/report_profiles/base.yaml",
+        "configs/report_profiles/technology_company.yaml",
+        "configs/report_profiles/consumer_product.yaml",
+        "configs/report_profiles/cyclical_industry.yaml",
+        "configs/skills/business_goal_decompose.yaml",
+        "configs/skills/capability_match.yaml",
+        "configs/skills/disclosure_gap_scan.yaml",
+        "configs/skills/reader_value_translate.yaml",
+        "configs/skills/tension_expand.yaml",
+        "configs/skill_packages/ipo_prospectus_analysis.yaml",
+        "configs/prompts/section_writer.yaml",
+        "configs/prompts/stitch_writer.yaml",
+        "configs/prompts/citation_checker.yaml",
+        "configs/prompts/narrative_writer.yaml",
+    ]
+
+    for path in paths:
+        config = load_yaml(path)
+        assert isinstance(config, dict)
+        assert config

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ipo_evidence.analysis_log import build_analysis_log
 from ipo_evidence.citation_layer import build_citations
 from ipo_evidence.config import load_yaml
 from ipo_evidence.evidence import build_evidence_packet
@@ -9,9 +10,11 @@ from ipo_evidence.ingest import company_name_from_filename, doc_id_for_file
 from ipo_evidence.io import ensure_dir, read_json, write_json, write_jsonl, write_text
 from ipo_evidence.models import EvidencePacket, Manifest, QualityStatus
 from ipo_evidence.parser import create_parser
+from ipo_evidence.quality_gate import apply_quality_gate
 from ipo_evidence.reader_bundle import build_reader_bundle
+from ipo_evidence.report_generator import generate_narrative_report
 from ipo_evidence.report_inputs import build_report_inputs
-from ipo_evidence.report_generator import generate_report
+from ipo_evidence.section_generator import generate_section_drafts
 from ipo_evidence.section_mapper import assign_section_paths, build_source_ast, map_canonical_sections
 from ipo_evidence.table_extractor import extract_tables
 from ipo_evidence.web_index import build_web_index, refresh_docs_index
@@ -27,14 +30,67 @@ def _read_report_inputs(package_dir: Path) -> dict | None:
     return report_inputs
 
 
+def _refresh_report_inputs(
+    package_dir: Path,
+    doc_id: str,
+    company_name: str,
+    packet: EvidencePacket,
+) -> dict:
+    fresh_report_inputs = build_report_inputs(doc_id, company_name, packet)
+    existing_report_inputs = _read_report_inputs(package_dir)
+    if existing_report_inputs is None:
+        write_json(package_dir / "report_inputs.json", fresh_report_inputs)
+        return fresh_report_inputs
+    if "doc_id" in existing_report_inputs and existing_report_inputs.get("doc_id") != doc_id:
+        raise ValueError(
+            f"report inputs doc_id mismatch: expected {doc_id}, got {existing_report_inputs.get('doc_id')}"
+        )
+
+    refreshed_report_inputs = dict(existing_report_inputs)
+    for key in (
+        "doc_id",
+        "company_name",
+        "profile_key",
+        "profile_title",
+        "attention_fields",
+    ):
+        refreshed_report_inputs[key] = fresh_report_inputs[key]
+    write_json(package_dir / "report_inputs.json", refreshed_report_inputs)
+    return refreshed_report_inputs
+
+
+def _evidence_policies(report_inputs: dict | None) -> dict[str, dict]:
+    if not report_inputs:
+        return {}
+    groups = report_inputs.get("section_groups", [])
+    if not isinstance(groups, list):
+        return {}
+    policies: dict[str, dict] = {}
+    for group in groups:
+        if not isinstance(group, dict):
+            continue
+        section_key = group.get("section_key")
+        policy = group.get("evidence_policy")
+        if isinstance(section_key, str) and isinstance(policy, dict):
+            policies[section_key] = policy
+    return policies
+
+
 def _write_report_artifacts(
     package_dir: Path,
     manifest: Manifest,
     packet: EvidencePacket,
     report_inputs: dict | None = None,
 ) -> None:
-    report = generate_report(manifest.company_name, packet, report_inputs)
     citations = build_citations(packet)
+    section_drafts = generate_section_drafts(packet, report_inputs)
+    quality_decisions = apply_quality_gate(section_drafts, _evidence_policies(report_inputs))
+    analysis_log = build_analysis_log(packet.doc_id, quality_decisions)
+    report, narrative_trace = generate_narrative_report(
+        manifest.company_name,
+        packet,
+        report_inputs,
+    )
     reader_bundle = build_reader_bundle(manifest, report, citations, packet)
     web_index = build_web_index(manifest)
 
@@ -43,6 +99,8 @@ def _write_report_artifacts(
         package_dir / "citation.json",
         [citation.model_dump(mode="json") for citation in citations],
     )
+    write_json(package_dir / "analysis_log.json", analysis_log)
+    write_json(package_dir / "narrative_trace.json", narrative_trace)
     write_json(package_dir / "reader_bundle.json", reader_bundle)
     write_json(package_dir / "web_index.json", web_index)
 
@@ -88,8 +146,8 @@ def run_one(pdf_path: Path, docs_dir: Path, fixture_path: Path) -> str:
     write_json(package_dir / "parse_report.json", parsed.parse_report)
     if parsed.raw_artifacts:
         write_json(package_dir / "parser_raw.json", parsed.raw_artifacts)
-    _write_report_artifacts(package_dir, manifest, packet, report_inputs)
     manifest.report_status = "reported"
+    _write_report_artifacts(package_dir, manifest, packet, report_inputs)
     write_json(package_dir / "manifest.json", manifest)
     write_json(package_dir / "web_index.json", build_web_index(manifest))
     refresh_docs_index(docs_dir)
@@ -117,11 +175,7 @@ def regenerate_report(doc_id: str, docs_dir: Path) -> None:
         raise ValueError(
             f"evidence packet doc_id mismatch: expected {doc_id}, got {packet.doc_id}"
         )
-    report_inputs = _read_report_inputs(package_dir)
-    if report_inputs and report_inputs.get("doc_id") != doc_id:
-        raise ValueError(
-            f"report inputs doc_id mismatch: expected {doc_id}, got {report_inputs.get('doc_id')}"
-        )
+    report_inputs = _refresh_report_inputs(package_dir, doc_id, manifest.company_name, packet)
 
     manifest.report_status = "reported"
     write_json(manifest_path, manifest)

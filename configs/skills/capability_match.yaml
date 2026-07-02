@@ -1,0 +1,18 @@
+skill_key: "capability_match"
+title: "能力匹配"
+action: "检查产品、研发、客户和交付能力是否支撑披露中的商业叙事。"
+requires:
+  - "evidence_chain"
+produces:
+  - "capability_judgment"
+  - "structured_conclusion"
+
+output_schema:
+  interpretation:
+    strengths: "list[string]"
+    weaknesses: "list[string]"
+    tension: "string"
+    resource_allocation: "string"
+  evidence_chain: "list[string]"
+  confidence: "high | medium | low"
+  gaps: "list[dict]"

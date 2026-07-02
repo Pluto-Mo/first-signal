@@ -1,0 +1,14 @@
+profile_key: "base"
+title: "通用招股书解读"
+attention_fields:
+  - "产品入口"
+  - "行业空间"
+  - "客户验证"
+  - "收入质量"
+  - "研发效率"
+  - "现金流"
+  - "风险暴露"
+default_skill_refs:
+  - "business_goal_decompose"
+  - "capability_match"
+  - "reader_value_translate"

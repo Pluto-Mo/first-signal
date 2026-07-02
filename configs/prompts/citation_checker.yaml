@@ -1,0 +1,5 @@
+prompt_slot: "citation_checker"
+purpose: "检查报告引用是否能回到 citation.json。"
+rules:
+  - "报告中的 citation id 必须存在。"
+  - "citation 必须保留本地定位字段。"

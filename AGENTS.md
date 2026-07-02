@@ -62,6 +62,7 @@ runs/
   evals/
 
 docs/
+  report_generation_architecture.md
   product/
   superpowers/specs/
 ```
@@ -90,13 +91,17 @@ data/docs/{doc_id}/
     T-001.csv
     T-001.md
   evidence_packet.json
+  analysis_log.json
+  quality_notes.md
   citation.json
   report.md
   parse_report.json
   web_index.json
 ```
 
-第一阶段不强制生成 `graphs/` 和 `charts/`，但数据模型应允许后续扩展。
+第一阶段不强制生成 `graphs/`、`charts/`、`analysis_log.json` 和 `quality_notes.md`，但数据模型应允许后续扩展。
+
+`analysis_log.json` 和 `quality_notes.md` 用于记录证据不足、被合并或暂缓进入正文的内部分析事项；这些内容不得伪装成最终报告结论。
 
 ## 引用约定
 

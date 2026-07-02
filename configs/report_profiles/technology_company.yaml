@@ -1,0 +1,10 @@
+profile_key: "technology_company"
+title: "技术公司解读"
+extends: "base"
+attention_fields:
+  - "研发人员"
+  - "核心技术"
+  - "专利"
+  - "产品化进度"
+  - "客户验证"
+  - "替代风险"

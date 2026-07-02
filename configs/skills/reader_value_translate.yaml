@@ -1,0 +1,18 @@
+skill_key: "reader_value_translate"
+title: "读者价值翻译"
+action: "把事实和判断转成个人读者能继续研究的问题。"
+requires:
+  - "core_claim"
+produces:
+  - "reader_value"
+  - "structured_conclusion"
+
+output_schema:
+  interpretation:
+    for_tech_people: "string"
+    for_investors: "string"
+    for_practitioners: "string"
+    for_consumers: "string"
+  evidence_chain: "list[string]"
+  confidence: "high | medium | low"
+  gaps: "list[dict]"

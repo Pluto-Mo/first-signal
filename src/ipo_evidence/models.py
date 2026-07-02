@@ -74,6 +74,14 @@ class EvidencePacket(BaseModel):
     items: list[EvidenceItem]
 
 
+class SkillInterpretation(BaseModel):
+    skill_key: str
+    interpretation: dict[str, Any] = Field(default_factory=dict)
+    evidence_chain: list[str] = Field(default_factory=list)
+    confidence: Literal["high", "medium", "low"]
+    gaps: list[dict[str, str]] = Field(default_factory=list)
+
+
 class Citation(BaseModel):
     citation_id: str
     type: Literal["text_quote", "table_fact"]
@@ -168,6 +176,60 @@ class ReaderBundle(BaseModel):
     report_status: str
     sections: list[ReaderSection] = Field(default_factory=list)
     citations: list[ReaderCitation] = Field(default_factory=list)
+
+
+class InternalTrace(BaseModel):
+    section_key: str
+    skill_refs: list[str] = Field(default_factory=list)
+    prompt_slot: str
+    evidence_ids: list[str] = Field(default_factory=list)
+    citation_ids: list[str] = Field(default_factory=list)
+    evidence_quality_statuses: list[QualityStatus] = Field(default_factory=list)
+    fact_count: int = 0
+    missing_contract_fields: list[str] = Field(default_factory=list)
+    readability_warnings: list[str] = Field(default_factory=list)
+
+
+class SectionDraft(BaseModel):
+    section_key: str
+    title: str
+    section_role: str = "main"
+    body: str
+    citation_ids: list[str] = Field(default_factory=list)
+    internal_trace: InternalTrace
+
+
+class QualityGateDecision(BaseModel):
+    section_key: str
+    action: Literal["include", "merge", "log_only"]
+    reason: str
+    title: str | None = None
+    evidence_count: int | None = None
+    min_fact_count: int | None = None
+    strength: str | None = None
+    required_strength: str | None = None
+    needed_evidence: list[str] = Field(default_factory=list)
+    suggested_next_step: str | None = None
+    suggested_next_steps: list[str] = Field(default_factory=list)
+
+
+class AnalysisLogEntry(BaseModel):
+    section_key: str
+    action: Literal["merge", "log_only"]
+    reason: str
+    title: str | None = None
+    evidence_count: int | None = None
+    min_fact_count: int | None = None
+    strength: str | None = None
+    required_strength: str | None = None
+    needed_evidence: list[str] = Field(default_factory=list)
+    suggested_next_step: str | None = None
+    suggested_next_steps: list[str] = Field(default_factory=list)
+
+
+class AnalysisLog(BaseModel):
+    doc_id: str
+    skipped_or_merged: list[AnalysisLogEntry] = Field(default_factory=list)
 
 
 JsonDict = dict[str, Any]

@@ -1,0 +1,20 @@
+skill_key: "tension_expand"
+title: "矛盾张力展开"
+action: "把增长、投入、现金流、风险之间的张力讲清楚。"
+requires:
+  - "core_claim"
+  - "evidence_chain"
+produces:
+  - "tension_summary"
+  - "structured_conclusion"
+
+output_schema:
+  interpretation:
+    tension_point: "string"
+    positive_side: "string"
+    negative_side: "string"
+    tradeoff_logic: "string"
+    future_path: "list[string]"
+  evidence_chain: "list[string]"
+  confidence: "high | medium | low"
+  gaps: "list[dict]"

@@ -1,9 +1,24 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from functools import lru_cache
 from typing import Any
 
 from ipo_evidence.config import load_yaml
+from ipo_evidence.report_profiles import default_report_profile_key, load_report_profile
+
+
+DEFAULT_EVIDENCE_POLICY = {
+    "min_fact_count": 2,
+    "min_strength": "medium",
+    "weak_evidence": "merge_into_related_section",
+    "no_evidence": "log_only",
+}
+
+DEFAULT_OUTPUT_CONTRACT = {
+    "shape": "narrative_section",
+    "requires": ["core_claim", "evidence_chain", "reader_value"],
+}
 
 
 @lru_cache(maxsize=1)
@@ -26,6 +41,24 @@ def _build_evidence_ref(evidence_id: str, section_path: list[str], rank: int) ->
         "rank": rank,
         "label": section_path[-1] if section_path else None,
     }
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str) and item]
+
+
+def _dict_value(value: Any, fallback: dict[str, Any]) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return deepcopy(value)
+    return deepcopy(fallback)
+
+
+def _string_value(value: Any, fallback: str) -> str:
+    if isinstance(value, str) and value:
+        return value
+    return fallback
 
 
 def build_report_inputs(doc_id: str, company_name: str, packet) -> dict:
@@ -52,13 +85,27 @@ def build_report_inputs(doc_id: str, company_name: str, packet) -> dict:
                 "constraints": template["constraints"],
                 "output_order": template["output_order"],
                 "token_budget": template["token_budget"],
+                "skill_refs": _string_list(template.get("skill_refs")),
+                "evidence_policy": _dict_value(
+                    template.get("evidence_policy"), DEFAULT_EVIDENCE_POLICY
+                ),
+                "output_contract": _dict_value(
+                    template.get("output_contract"), DEFAULT_OUTPUT_CONTRACT
+                ),
+                "section_role": _string_value(template.get("section_role"), "main"),
                 "evidence_refs": refs,
             }
         )
 
+    profile_key = default_report_profile_key()
+    profile = load_report_profile(profile_key)
+
     return {
         "doc_id": doc_id,
         "company_name": company_name,
+        "profile_key": profile.profile_key,
+        "profile_title": profile.title,
+        "attention_fields": profile.attention_fields,
         "outline": [group["section_key"] for group in section_groups],
         "section_groups": section_groups,
     }

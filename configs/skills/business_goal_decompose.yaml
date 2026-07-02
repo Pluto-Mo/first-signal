@@ -1,0 +1,19 @@
+skill_key: "business_goal_decompose"
+title: "业务目标拆解"
+action: "把披露事实拆成产品、客户、收入和资源配置问题。"
+requires:
+  - "core_claim"
+produces:
+  - "business_question"
+  - "structured_conclusion"
+
+output_schema:
+  interpretation:
+    business_goal: "string"
+    product_entry: "list[string]"
+    target_scenario: "list[string]"
+    customer_type: "string"
+    revenue_structure: "string"
+  evidence_chain: "list[string]"
+  confidence: "high | medium | low"
+  gaps: "list[dict]"

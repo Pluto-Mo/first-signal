@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -18,6 +19,51 @@ def stub_parser_config(monkeypatch: pytest.MonkeyPatch):
         "load_yaml",
         lambda _relative_path: {"provider": "api_stub"},
     )
+    monkeypatch.setattr(
+        "ipo_evidence.narrative_engine.call_agent_for_narrative",
+        lambda **_kwargs: (
+            "这是一篇由 LLM 生成的自然报告。[C-001]\n\n"
+            "第二段继续讨论业务与风险。[C-002]\n\n"
+            "结尾提醒读者继续核查收入质量。[C-003]"
+        ),
+    )
+    monkeypatch.setattr(
+        "ipo_evidence.skill_executor.call_claude_for_skill",
+        lambda **kwargs: _skill_llm_stub(kwargs["skill_name"]),
+    )
+
+
+def _skill_llm_stub(skill_name: str) -> str:
+    if skill_name == "business_goal_decompose":
+        return """
+        {
+          "business_goal": "把 AI 能力装进终端硬件",
+          "product_entry": ["AI 芯片", "智慧办公硬件"],
+          "target_scenario": ["智慧出行", "会议"],
+          "customer_type": "B2B",
+          "revenue_structure": "硬件和解决方案收入为主"
+        }
+        """
+    if skill_name == "capability_match":
+        return """
+        {
+          "strengths": ["产品覆盖多场景", "研发投入持续"],
+          "weaknesses": ["现金流波动", "客户集中风险"],
+          "tension": "多场景放量能力与盈利质量压力并存",
+          "resource_allocation": "资源集中投向研发和场景交付"
+        }
+        """
+    if skill_name == "tension_expand":
+        return """
+        {
+          "tension_point": "收入增长与现金流压力并存",
+          "positive_side": "产品和收入持续扩张",
+          "negative_side": "现金流波动和亏损仍需验证",
+          "tradeoff_logic": "扩张期投入支撑增长，但短期压低盈利质量",
+          "future_path": ["提高客户分散度", "验证研发转化效率"]
+        }
+        """
+    return "{}"
 
 
 def test_run_one_creates_document_package(tmp_path: Path):
@@ -44,11 +90,35 @@ def test_run_one_creates_document_package(tmp_path: Path):
     assert (package / "report_inputs.json").exists()
     assert (package / "report.md").exists()
     assert (package / "citation.json").exists()
+    assert (package / "analysis_log.json").exists()
+    assert (package / "narrative_trace.json").exists()
     assert (package / "reader_bundle.json").exists()
     assert (package / "web_index.json").exists()
     docs_index = read_json(docs / "index.json")
     assert docs_index[0]["doc_id"] == doc_id
     assert docs_index[0]["reader_bundle_path"] == f"{doc_id}/reader_bundle.json"
+    analysis_log = read_json(package / "analysis_log.json")
+    assert analysis_log["doc_id"] == doc_id
+    assert "skipped_or_merged" in analysis_log
+    report_text = (package / "report.md").read_text(encoding="utf-8")
+    paragraphs = [part.strip() for part in report_text.split("\n\n") if part.strip()]
+    assert all(len(paragraph) < 1200 for paragraph in paragraphs)
+    assert report_text.count("{'") == 0
+    assert "对应数据为" not in report_text
+    assert report_text.count("[C-") <= 50
+    assert report_text.startswith("# 测试股份有限公司招股书长篇阅读")
+    assert "这是一篇由 LLM 生成的自然报告" in report_text
+    assert "能力上，它的正面线索" not in report_text
+    citations = read_json(package / "citation.json")
+    citation_ids = {citation["citation_id"] for citation in citations}
+    assert set(re.findall(r"\[(C-\d{3})\]", report_text)) <= citation_ids
+    manifest = read_json(package / "manifest.json")
+    reader_bundle = read_json(package / "reader_bundle.json")
+    web_index = read_json(package / "web_index.json")
+    assert manifest["report_status"] == "reported"
+    assert reader_bundle["report_status"] == "reported"
+    assert any(section["title"] == "总览" for section in reader_bundle["sections"])
+    assert web_index["report_status"] == "reported"
 
 
 def test_run_one_uses_parser_selected_from_config(
@@ -114,22 +184,182 @@ def test_regenerate_report_rewrites_report_and_citations(tmp_path: Path):
     package = docs / doc_id
     report_path = package / "report.md"
     citation_path = package / "citation.json"
+    analysis_log_path = package / "analysis_log.json"
     report_path.write_text("broken report", encoding="utf-8")
     citation_path.write_text("[]\n", encoding="utf-8")
+    analysis_log_path.write_text(
+        '{"doc_id":"broken","skipped_or_merged":[{"section_key":"old","reason":"old"}]}\n',
+        encoding="utf-8",
+    )
 
     regenerate_report(doc_id, docs)
 
     report_text = report_path.read_text(encoding="utf-8")
     citations = read_json(citation_path)
+    analysis_log = read_json(analysis_log_path)
     reader_bundle = read_json(package / "reader_bundle.json")
     web_index = read_json(package / "web_index.json")
+    narrative_trace = read_json(package / "narrative_trace.json")
 
     assert "broken report" not in report_text
     assert "# 测试股份有限公司招股书长篇阅读" in report_text
     assert citations[0]["citation_id"] == "C-001"
+    assert analysis_log["doc_id"] == doc_id
+    assert narrative_trace["skills_used"]
+    assert narrative_trace["skill_outputs"]["business_goal_decompose"]["interpretation"]["business_goal"]
+    assert len(narrative_trace["skill_outputs"]["capability_match"]["interpretation"]["strengths"]) <= 5
+    assert narrative_trace["llm_used"] is True
     assert reader_bundle["report_title"] == "测试股份有限公司招股书长篇阅读"
     assert web_index["doc_id"] == doc_id
     assert web_index["company_name"] == "测试股份有限公司"
+
+
+def test_regenerate_report_does_not_dump_large_report_inputs(tmp_path: Path):
+    inbox = tmp_path / "inbox"
+    docs = tmp_path / "docs"
+    inbox.mkdir()
+    pdf = inbox / "测试股份有限公司招股说明书.pdf"
+    pdf.write_bytes(b"%PDF-1.4\nsample")
+
+    doc_id = run_one(
+        pdf_path=pdf,
+        docs_dir=docs,
+        fixture_path=Path("tests/fixtures/sample_prospectus.txt"),
+    )
+
+    package = docs / doc_id
+    report_inputs = read_json(package / "report_inputs.json")
+    first_group = report_inputs["section_groups"][0]
+    original_refs = list(first_group["evidence_refs"])
+    first_group["evidence_refs"] = original_refs * 20
+    (package / "report_inputs.json").write_text(
+        json.dumps(report_inputs, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    regenerate_report(doc_id, docs)
+
+    report_text = (package / "report.md").read_text(encoding="utf-8")
+    paragraphs = [part.strip() for part in report_text.split("\n\n") if part.strip()]
+    assert all(len(paragraph) < 1200 for paragraph in paragraphs)
+    assert report_text.count("[C-") <= 50
+    assert "对应数据为" not in report_text
+    assert "{'" not in report_text
+
+
+def test_regenerate_report_refreshes_profile_metadata_without_overwriting_section_edits(
+    tmp_path: Path,
+):
+    inbox = tmp_path / "inbox"
+    docs = tmp_path / "docs"
+    inbox.mkdir()
+    pdf = inbox / "测试股份有限公司招股说明书.pdf"
+    pdf.write_bytes(b"%PDF-1.4\nsample")
+
+    doc_id = run_one(
+        pdf_path=pdf,
+        docs_dir=docs,
+        fixture_path=Path("tests/fixtures/sample_prospectus.txt"),
+    )
+
+    package = docs / doc_id
+    report_inputs_path = package / "report_inputs.json"
+    report_inputs = read_json(report_inputs_path)
+    report_inputs.pop("profile_key")
+    report_inputs.pop("profile_title")
+    report_inputs.pop("attention_fields")
+    first_group = report_inputs["section_groups"][0]
+    first_group["evidence_policy"] = {
+        "min_fact_count": 123,
+        "min_strength": "high",
+        "weak_evidence": "log_only",
+        "no_evidence": "log_only",
+    }
+    first_group["evidence_refs"] = [{"evidence_id": "E-SENTINEL", "rank": 99}]
+    report_inputs_path.write_text(
+        json.dumps(report_inputs, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    regenerate_report(doc_id, docs)
+
+    refreshed = read_json(report_inputs_path)
+    refreshed_first_group = refreshed["section_groups"][0]
+    assert refreshed["profile_key"]
+    assert refreshed["profile_title"]
+    assert refreshed["attention_fields"]
+    assert refreshed["doc_id"] == doc_id
+    assert refreshed["company_name"] == "测试股份有限公司"
+    assert refreshed_first_group["evidence_policy"]["min_fact_count"] == 123
+    assert refreshed_first_group["evidence_refs"] == [{"evidence_id": "E-SENTINEL", "rank": 99}]
+
+
+def test_regenerate_report_rejects_report_inputs_doc_id_mismatch(tmp_path: Path):
+    inbox = tmp_path / "inbox"
+    docs = tmp_path / "docs"
+    inbox.mkdir()
+    pdf = inbox / "测试股份有限公司招股说明书.pdf"
+    pdf.write_bytes(b"%PDF-1.4\nsample")
+
+    doc_id = run_one(
+        pdf_path=pdf,
+        docs_dir=docs,
+        fixture_path=Path("tests/fixtures/sample_prospectus.txt"),
+    )
+
+    package = docs / doc_id
+    report_inputs_path = package / "report_inputs.json"
+    report_inputs = read_json(report_inputs_path)
+    report_inputs["doc_id"] = "other-doc"
+    report_inputs_path.write_text(
+        json.dumps(report_inputs, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="report inputs doc_id mismatch"):
+        regenerate_report(doc_id, docs)
+
+
+def test_regenerate_report_logs_weak_sections_without_adding_report_section(tmp_path: Path):
+    inbox = tmp_path / "inbox"
+    docs = tmp_path / "docs"
+    inbox.mkdir()
+    pdf = inbox / "测试股份有限公司招股说明书.pdf"
+    pdf.write_bytes(b"%PDF-1.4\nsample")
+
+    doc_id = run_one(
+        pdf_path=pdf,
+        docs_dir=docs,
+        fixture_path=Path("tests/fixtures/sample_prospectus.txt"),
+    )
+
+    package = docs / doc_id
+    report_inputs_path = package / "report_inputs.json"
+    report_inputs = read_json(report_inputs_path)
+    for group in report_inputs["section_groups"]:
+        if group["section_key"] == "company_and_industry":
+            group["evidence_policy"] = {
+                "min_fact_count": 999,
+                "min_strength": "medium",
+                "weak_evidence": "merge_into_related_section",
+                "no_evidence": "log_only",
+            }
+    report_inputs_path.write_text(
+        json.dumps(report_inputs, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    regenerate_report(doc_id, docs)
+
+    report_text = (package / "report.md").read_text(encoding="utf-8")
+    analysis_log = read_json(package / "analysis_log.json")
+
+    assert "公司介绍与行业概况" not in report_text
+    assert any(
+        entry["section_key"] == "company_and_industry"
+        and entry["action"] == "merge"
+        for entry in analysis_log["skipped_or_merged"]
+    )
 
 
 def test_regenerate_report_updates_manifest_and_web_index_status(tmp_path: Path):

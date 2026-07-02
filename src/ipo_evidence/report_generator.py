@@ -4,7 +4,10 @@ from collections import defaultdict
 from typing import Any
 
 from ipo_evidence.models import EvidenceItem, EvidencePacket
-from ipo_evidence.report_inputs import load_report_prompt_config
+from ipo_evidence.narrative_engine import generate_narrative
+from ipo_evidence.report_inputs import build_report_inputs, load_report_prompt_config
+from ipo_evidence.report_runtime import load_skill_package_config
+from ipo_evidence.skill_executor import execute_skill
 
 
 SECTION_ORDER = [
@@ -118,6 +121,13 @@ def _index_items(packet: EvidencePacket) -> dict[str, tuple[int, EvidenceItem]]:
     return {item.evidence_id: (index, item) for index, item in enumerate(packet.items, start=1)}
 
 
+def _citation_index(packet: EvidencePacket) -> dict[str, str]:
+    return {
+        item.evidence_id: _citation_id(index)
+        for index, item in enumerate(packet.items, start=1)
+    }
+
+
 def _section_groups_from_inputs(report_inputs: dict[str, Any] | None) -> list[dict[str, Any]]:
     if not report_inputs:
         return []
@@ -155,6 +165,13 @@ def _view_title(section_key: str, fallback: str) -> str:
     return title if isinstance(title, str) and title else fallback
 
 
+def _rank_value(ref: dict[str, Any]) -> int:
+    rank = ref.get("rank", 99)
+    if type(rank) is int and rank >= 0:
+        return rank
+    return 99
+
+
 def _items_for_input_group(
     group: dict[str, Any],
     item_index: dict[str, tuple[int, EvidenceItem]],
@@ -163,11 +180,15 @@ def _items_for_input_group(
     if not isinstance(refs, list):
         return []
     items: list[tuple[int, EvidenceItem]] = []
-    for ref in sorted(refs, key=lambda ref: ref.get("rank", 99) if isinstance(ref, dict) else 99):
+    seen_evidence_ids: set[str] = set()
+    for ref in sorted(refs, key=lambda ref: _rank_value(ref) if isinstance(ref, dict) else 99):
         if not isinstance(ref, dict):
             continue
         evidence_id = ref.get("evidence_id")
         if isinstance(evidence_id, str) and evidence_id in item_index:
+            if evidence_id in seen_evidence_ids:
+                continue
+            seen_evidence_ids.add(evidence_id)
             items.append(item_index[evidence_id])
     return items
 
@@ -572,7 +593,13 @@ def generate_report(
     company_name: str,
     packet: EvidencePacket,
     report_inputs: dict[str, Any] | None = None,
+    *,
+    use_narrative_engine: bool = False,
 ) -> str:
+    if use_narrative_engine:
+        report, _trace = generate_narrative_report(company_name, packet, report_inputs)
+        return report
+
     grouped = _group_items(packet)
     item_index = _index_items(packet)
     for group in _section_groups_from_inputs(report_inputs):
@@ -582,3 +609,59 @@ def generate_report(
 
     lines = _report_body(company_name, grouped, report_inputs, item_index)
     return "\n".join(lines) + "\n"
+
+
+def generate_narrative_report(
+    company_name: str,
+    packet: EvidencePacket,
+    report_inputs: dict[str, Any] | None,
+) -> tuple[str, dict[str, Any]]:
+    inputs = report_inputs or build_report_inputs(packet.doc_id, company_name, packet)
+    citations = _citation_index(packet)
+    skill_outputs = []
+    skill_package = load_skill_package_config("ipo_prospectus_analysis")
+    section_groups = _section_groups_from_inputs(inputs)
+    for skill_key in skill_package.skills:
+        section_group = _find_section_group_for_skill(skill_key, section_groups)
+        evidence_refs = section_group.get("evidence_refs", [])
+        if not isinstance(evidence_refs, list):
+            evidence_refs = []
+        skill_outputs.append(
+            execute_skill(
+                skill_key=skill_key,
+                evidence_refs=evidence_refs,
+                evidence_packet=packet,
+                citation_index=citations,
+            )
+        )
+
+    narrative_md, trace = generate_narrative(
+        all_skill_outputs=skill_outputs,
+        evidence_packet=packet,
+        citation_index=citations,
+        narrative_style="analytical",
+    )
+    trace["skill_outputs"] = {
+        output.skill_key: {
+            "interpretation": output.interpretation,
+            "confidence": output.confidence,
+            "evidence_chain": output.evidence_chain,
+            "gaps": output.gaps,
+        }
+        for output in skill_outputs
+    }
+    return "\n".join([_report_title(company_name), "", narrative_md, ""]), trace
+
+
+def _find_section_group_for_skill(skill_key: str, section_groups: list[dict[str, Any]]) -> dict[str, Any]:
+    for group in section_groups:
+        skill_refs = group.get("skill_refs", [])
+        if isinstance(skill_refs, list) and skill_key in skill_refs:
+            return group
+    all_refs = [
+        ref
+        for group in section_groups
+        for ref in group.get("evidence_refs", [])
+        if isinstance(group.get("evidence_refs"), list) and isinstance(ref, dict)
+    ]
+    return {"evidence_refs": all_refs}

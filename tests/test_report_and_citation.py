@@ -1,7 +1,7 @@
 from ipo_evidence.citation_layer import build_citations
 from ipo_evidence.evidence import build_evidence_packet
 from ipo_evidence.models import Block, EvidenceItem, EvidencePacket, QualityStatus, TableObject
-from ipo_evidence.report_generator import generate_report
+from ipo_evidence.report_generator import _items_for_input_group, generate_report
 
 
 def test_report_contains_citation_markers_and_citation_json():
@@ -245,6 +245,64 @@ def test_generate_report_uses_report_inputs_section_groups():
     assert "[C-001]" in draft
 
 
+def test_generate_report_handles_invalid_rank_unknown_and_duplicate_input_refs():
+    packet = EvidencePacket(
+        doc_id="doc_test",
+        items=[
+            EvidenceItem(
+                evidence_id="E-001",
+                canonical_section="about_company",
+                claim_summary="公司主要从事智能硬件产品的研发、生产和销售。",
+                source_type="text_quote",
+                source_file="测试股份有限公司招股说明书.pdf",
+                page_number=2,
+                block_id="B-000002",
+                section_path=["发行人基本情况"],
+                quote="公司主要从事智能硬件产品的研发、生产和销售。",
+                quality_status=QualityStatus.safe_to_use,
+            ),
+            EvidenceItem(
+                evidence_id="E-002",
+                canonical_section="financials",
+                claim_summary="报告期内公司营业收入持续增长。",
+                source_type="text_quote",
+                source_file="测试股份有限公司招股说明书.pdf",
+                page_number=3,
+                block_id="B-000003",
+                section_path=["财务会计信息"],
+                quote="报告期内公司营业收入持续增长。",
+                quality_status=QualityStatus.safe_to_use,
+            ),
+        ],
+    )
+    report_inputs = {
+        "doc_id": "doc_test",
+        "company_name": "测试股份有限公司",
+        "section_groups": [
+            {
+                "section_key": "company_and_industry",
+                "title": "公司介绍与行业概况",
+                "evidence_refs": [
+                    {"evidence_id": "E-001", "rank": "1"},
+                    {"evidence_id": "E-002", "rank": 2},
+                    {"evidence_id": "E-001", "rank": -1},
+                    {"evidence_id": "E-999", "rank": 1},
+                ],
+            }
+        ],
+    }
+
+    draft = generate_report("测试股份有限公司", packet, report_inputs)
+    input_items = _items_for_input_group(
+        report_inputs["section_groups"][0],
+        {item.evidence_id: (index, item) for index, item in enumerate(packet.items, start=1)},
+    )
+
+    assert "[C-001]" in draft
+    assert "[C-002]" in draft
+    assert [item.evidence_id for _, item in input_items] == ["E-002", "E-001"]
+
+
 def test_generate_report_avoids_internal_system_wording():
     packet = EvidencePacket(
         doc_id="doc_test",
@@ -292,3 +350,60 @@ def test_generate_report_avoids_internal_system_wording():
         "证据清单",
     ]
     assert all(phrase not in draft for phrase in banned_phrases)
+
+
+def test_generate_report_can_use_narrative_engine_migration_path(monkeypatch):
+    monkeypatch.setattr(
+        "ipo_evidence.narrative_engine.call_agent_for_narrative",
+        lambda **_kwargs: "LLM 生成的迁移路径报告，提到公司主要产品包括 AI 芯片和智慧办公硬件。[C-001]",
+    )
+    monkeypatch.setattr(
+        "ipo_evidence.skill_executor.call_claude_for_skill",
+        lambda **kwargs: (
+            '{"business_goal":"把 AI 能力装进终端硬件","product_entry":["AI 芯片"],'
+            '"target_scenario":["智慧办公"],"customer_type":"B2B","revenue_structure":"硬件收入为主"}'
+            if kwargs["skill_name"] == "business_goal_decompose"
+            else '{"strengths":["产品覆盖明确"],"weaknesses":["仍需验证盈利质量"],'
+            '"tension":"产品落地与盈利质量并存","resource_allocation":"研发投入持续"}'
+            if kwargs["skill_name"] == "capability_match"
+            else '{"tension_point":"增长与投入并存","positive_side":"产品扩张",'
+            '"negative_side":"投入压力","tradeoff_logic":"扩张需要投入","future_path":["验证转化"]}'
+        ),
+    )
+
+    packet = EvidencePacket(
+        doc_id="doc_test",
+        items=[
+            EvidenceItem(
+                evidence_id="E-001",
+                canonical_section="business_and_product",
+                claim_summary="公司主要产品包括 AI 芯片和智慧办公硬件。",
+                source_type="text_quote",
+                source_file="测试股份有限公司招股说明书.pdf",
+                page_number=3,
+                block_id="B-001",
+                section_path=["业务和技术"],
+                quote="公司主要产品包括 AI 芯片和智慧办公硬件。",
+                quality_status=QualityStatus.safe_to_use,
+            ),
+            EvidenceItem(
+                evidence_id="E-002",
+                canonical_section="financials",
+                claim_summary="报告期内公司研发费用持续增长。",
+                source_type="text_quote",
+                source_file="测试股份有限公司招股说明书.pdf",
+                page_number=4,
+                block_id="B-002",
+                section_path=["财务会计信息"],
+                quote="报告期内公司研发费用持续增长。",
+                quality_status=QualityStatus.safe_to_use,
+            ),
+        ],
+    )
+
+    draft = generate_report("测试股份有限公司", packet, use_narrative_engine=True)
+
+    assert draft.startswith("# 测试股份有限公司招股书长篇阅读")
+    assert "## 公司介绍与行业概况" not in draft
+    assert "公司主要产品包括 AI 芯片和智慧办公硬件" in draft
+    assert "[C-001]" in draft
