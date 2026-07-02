@@ -12,7 +12,6 @@ export function CitationDrawer({ citation, onClose }: CitationDrawerProps) {
   return (
     <aside className="citation-drawer" aria-label="引用抽屉">
       <div className="citation-drawer-header">
-        <p className="eyebrow">Citation</p>
         <button
           type="button"
           className="drawer-close-button"

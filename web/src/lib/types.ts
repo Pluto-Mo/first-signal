@@ -4,6 +4,9 @@ export interface DocsIndexItem {
   doc_id: string;
   company_name: string;
   source_file: string;
+  industry?: string | null;
+  published_at?: string | null;
+  created_at?: number | null;
   quality_status: QualityStatus;
   parse_status: string;
   report_status: string;
@@ -12,6 +15,15 @@ export interface DocsIndexItem {
   citation_path: string;
   reader_bundle_path: string;
 }
+
+export interface DocumentGroup {
+  id: string;
+  label: string;
+  icon: string;
+  documents: DocsIndexItem[];
+}
+
+export type GroupingMode = "time" | "industry";
 
 export interface ReaderCitationLocation {
   source_file: string;

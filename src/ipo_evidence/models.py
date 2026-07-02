@@ -124,6 +124,9 @@ class WebIndex(BaseModel):
     doc_id: str
     company_name: str
     source_file: str
+    industry: str | None = None
+    published_at: str | None = None
+    created_at: int | None = None
     quality_status: QualityStatus
     parse_status: str
     report_status: str

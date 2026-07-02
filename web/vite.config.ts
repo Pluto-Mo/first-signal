@@ -73,13 +73,19 @@ function serveDocsDirectory(docsDir: string): Plugin {
   };
 }
 
-const docsDir = path.resolve(__dirname, "../data/docs");
+export default defineConfig(({ command }) => {
+  const devDocsDir = path.resolve(__dirname, "../data/docs");
+  const showcaseDocsDir = path.resolve(__dirname, "showcase-data");
+  const docsDir = path.resolve(
+    process.env.READER_DATA_DIR ?? (command === "build" ? showcaseDocsDir : devDocsDir)
+  );
 
-export default defineConfig({
-  publicDir: docsDir,
-  plugins: [react(), serveDocsDirectory(docsDir)],
-  test: {
-    environment: "jsdom",
-    globals: true
-  }
+  return {
+    publicDir: docsDir,
+    plugins: [react(), serveDocsDirectory(docsDir)],
+    test: {
+      environment: "jsdom",
+      globals: true
+    }
+  };
 });

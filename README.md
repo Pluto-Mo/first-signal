@@ -1,361 +1,211 @@
 # IPO Evidence Intelligence
 
-IPO Evidence Intelligence 是一个面向招股说明书的证据型智能解读系统。它覆盖了从 A 股招股书自动抓取、PDF 解析、文档资产化、证据抽取、RAG 式内容组织、报告生成，到本地 Web 阅读与 citation 核查的完整流程。
+IPO Evidence Intelligence 是一个面向招股说明书的证据型智能解读系统。它把 A 股 IPO 招股书从公告发现、PDF 接入、OCR/解析、文档资产化、证据抽取、Skills 分析、可拔插重写，到 Web 阅读器 citation 核查串成一条本地工作流。
 
-这个项目不是简单的“把 PDF 丢给大模型总结”。它的核心设计目标是：让 AI 输出的每一个关键判断，都能回到原始招股说明书中的具体页码、文本块、章节路径或表格字段，从架构上降低幻觉率，提高研究结论的可追溯性。同时，它在设计中把 Token 成本控制放在重要位置，通过分层处理、结构化证据和按需检索，避免像许多深度调研工作流那样把大量无关上下文一次性塞进模型。
+这个项目不是“把 PDF 直接丢给大模型总结”。核心目标是：关键判断必须能回到原始招股说明书中的页码、文本块、章节路径或表格字段。报告可以被重写，证据不能被编造。
 
 > 项目用途：个人研究、招股书阅读、证据组织、AI 文档处理实验。  
 > 非用途：投资建议、交易推荐、法律意见或财务审计结论。
 
-## 项目定位
+## 当前状态
 
-招股说明书通常有几百页，包含正文、章节层级、财务表格、客户供应商数据、募投信息、风险因素等内容。直接让大模型读取整本 PDF，容易出现三个问题：
+- 已跑通本地 PDF 输入和 A 股公告抓取前置层。
+- 已形成长期文档资产：`document.md`、`blocks.jsonl`、`source_ast.json`、`canonical_ast.json`、`tables/`、`evidence_packet.json`、`citation.json`、`report.md`、`reader_bundle.json`。
+- 报告生成已升级为 Skills 层 + 两段式重写层。
+- Web 阅读器已支持左侧文档树、时间/行业分组、阅读区和可点击 citation 抽屉。
+- GitHub Pages 只发布展示用静态阅读包，不同步原始 `data/`。
 
-- 上下文过长，模型容易遗漏关键信息。
-- 表格、图示、页码和章节关系容易丢失。
-- 报告看起来完整，但无法判断每个结论来自哪里。
-
-IPO Evidence Intelligence 的解决方式是先把 PDF 变成 AI 可读、可检索、可引用的结构化资产，再基于这些资产生成报告。也就是说，系统先构建“证据层”，再进行“内容生成”。
-
-## 完整流程
-
-当前项目已经形成从数据获取到后续使用的端到端闭环：
+## 流程架构
 
 ```mermaid
 flowchart LR
-  A["A 股公告源<br/>CNInfo"] --> B["自动抓取层<br/>发现 / 筛选 / 下载 / 留档"]
-  B --> C["PDF 输入池<br/>data/inbox"]
+  A["公告源 / 本地 PDF"] --> B["source_sync 抓取层<br/>发现 / 筛选 / 下载 / 留档"]
+  B --> C["data/inbox<br/>PDF 输入池"]
   C --> D["文档接入<br/>doc_id / manifest"]
   D --> E["PDF 解析<br/>Markdown / blocks / tables"]
   E --> F["章节映射<br/>source_ast / canonical_ast"]
-  F --> G["表格结构化<br/>财务 / 客户 / 供应商 / 募投"]
-  G --> H["证据包<br/>evidence_packet.json"]
-  H --> I["RAG 上下文组织<br/>report_inputs.json"]
-  I --> J["模块化报告生成<br/>report.md"]
-  H --> K["引用层<br/>citation.json"]
-  J --> L["阅读资产<br/>reader_bundle.json / web_index.json"]
-  K --> L
-  L --> M["本地 Web 阅读器<br/>连续阅读 / citation 核查"]
+  F --> G["证据层<br/>evidence_packet / citation"]
+  G --> H["报告运行时输入<br/>profile / report_inputs"]
+  H --> I["Skills 层<br/>业务目标拆解 / 能力匹配 / 张力展开 / 读者价值翻译"]
+  I --> J["草稿重写层<br/>section writer / stitch writer"]
+  J --> K["叙事重写层<br/>narrative engine / narrative writer prompt"]
+  K --> L["阅读资产<br/>report.md / reader_bundle.json / web_index.json"]
+  L --> M["Web 阅读器<br/>文档树 / citation 抽屉"]
+  L --> N["GitHub Pages 展示包<br/>report + citation only"]
 ```
 
-这个流程包含三个关键闭环：
+## 核心设计
 
-- **数据闭环**：自动抓取或手动放入 PDF，统一进入 `data/inbox/`。
-- **证据闭环**：PDF 被拆解为 Markdown、文本块、章节树、表格和 evidence packet。
-- **使用闭环**：报告、citation 和阅读资产在 Web 阅读器中联动，方便边读边核查。
+### 1. 证据先于表达
 
-## 架构设计：从源头降低幻觉率
-
-项目架构的核心不是“生成得更像报告”，而是“让生成不能脱离证据”。
+系统先把 PDF 拆成可检索、可定位、可引用的长期资产，再生成报告。
 
 ```text
-原始 PDF
-  -> Markdown 正文
-  -> 文本块 blocks.jsonl
-  -> 章节结构 source_ast.json / canonical_ast.json
-  -> 表格结构 tables/*.json
-  -> 证据包 evidence_packet.json
-  -> 报告输入 report_inputs.json
-  -> 报告 report.md
-  -> 引用 citation.json
-  -> 阅读资产 reader_bundle.json / web_index.json
-```
-
-这套架构通过以下方式降低幻觉率：
-
-1. **不直接基于整本 PDF 自由生成**
-
-   报告生成器不把整份 PDF 当成一个巨大 prompt 输入，而是从 `evidence_packet.json` 和 `report_inputs.json` 中取材料。生成内容必须经过证据层组织。
-
-2. **减少无效上下文输入**
-
-   系统先把 PDF 拆成章节、文本块、表格和证据项，再按分析目标选择需要的材料。模型面对的是经过筛选的高相关上下文，而不是整本招股书的原始内容。这既能降低幻觉率，也能显著节约 Token。
-
-3. **事实与表达分离**
-
-   `evidence_packet.json` 保存事实、来源位置和质量状态；`report.md` 只负责表达。这样即使报告需要重写，也不影响底层证据。
-
-4. **citation 约束**
-
-   文本引用需要包含 `source_file`、`page_number`、`block_id`、`section_path` 和 `quote`。表格引用需要包含 `table_id`、`table_title`、字段值和来源页码。
-
-5. **质量状态显式化**
-
-   系统使用 `safe_to_use`、`manual_review`、`do_not_use` 三档质量状态。解析失败、章节不完整、表格质量低或引用不足时，不会被包装成“看起来完成”的报告。
-
-6. **模块边界清晰**
-
-   抓取层、解析层、证据层、生成层和 Web 层相互解耦。任何一层出现问题，都可以定位、替换或复查，不会把错误一路静默传递到最终报告。
-
-## 招股说明书处理方式
-
-招股说明书不是普通文章 PDF。它既有长文本，也有目录、页码、复杂表格、风险章节、财务数据和业务描述。项目在设计上参考了国外文档智能项目中常见的 PDF-to-Markdown / layout-aware processing 思路：先把 PDF 拆成 AI 更容易读取的中间语言，再对不同内容类型分别处理。
-
-### 1. PDF 转为 Markdown 与文本块
-
-系统先将 PDF 内容转成 Markdown 正文，并拆分为带页码、块 ID 和章节路径的文本块：
-
-```text
-document.md
-blocks.jsonl
-parse_report.json
-```
-
-这样做的意义是：Markdown 适合大模型读取，`blocks.jsonl` 适合检索、定位和 citation。
-
-### 2. 章节结构单独建模
-
-系统会生成两类章节结构：
-
-```text
-source_ast.json
-canonical_ast.json
-```
-
-`source_ast.json` 尽量保留原招股书章节结构；`canonical_ast.json` 则将不同公司、不同文件中的章节映射到统一研究口径，例如业务与产品、行业、财务、募投、风险等。
-
-### 3. 图表和表格分开处理
-
-表格不会被简单混进正文，而是进入独立的结构化目录：
-
-```text
-tables/
-  T-001.json
-  T-002.json
-```
-
-每张表保留标题、页码、章节路径、列名、行数据和质量评分。这样财务数据、客户供应商、研发费用、募投项目等信息可以作为结构化证据参与后续分析。
-
-### 4. 形成长期文档资产
-
-每份招股书最终形成一个可复用的文档包：
-
-```text
-data/docs/{doc_id}/
-  manifest.json
-  document.md
-  blocks.jsonl
-  source_ast.json
-  canonical_ast.json
-  tables/
-    T-001.json
-  evidence_packet.json
-  report_inputs.json
-  report.md
-  citation.json
-  reader_bundle.json
-  parse_report.json
-  web_index.json
-```
-
-PDF 只是输入材料，真正长期保存和复用的是这些 AI 可读、可检索、可核查的文档资产。
-
-## 内容生成与拓展性
-
-项目的内容生成不是单一 prompt 输出，而是经过处理、组织和模块化设计后的生成流程。
-
-### 模块化生成
-
-当前报告生成链路是：
-
-```text
-evidence_packet.json
-  -> report_inputs.json
-  -> report.md
+PDF
+  -> document.md
+  -> blocks.jsonl
+  -> source_ast.json / canonical_ast.json
+  -> tables/*.json
+  -> evidence_packet.json
   -> citation.json
+  -> report.md
   -> reader_bundle.json
 ```
 
-`evidence_packet.json` 负责保存可引用事实，`report_inputs.json` 负责组织分析视角，`report.md` 负责最终表达，`citation.json` 负责来源核查，`reader_bundle.json` 负责把报告和引用整理成前端可直接消费的阅读资产。这个结构使报告生成可以被替换、扩展或重写，而不破坏底层证据资产。
+文本 citation 必须包含 `source_file`、`page_number`、`block_id`、`section_path` 和 `quote`。表格 citation 使用 `table_id`、`table_title`、字段值和来源页码定位。
 
-### Token 友好型生成
+### 2. Skills 层
 
-项目在内容生成前做了多层压缩和筛选：PDF 先被转成 Markdown、文本块、章节树、结构化表格和 evidence packet，后续生成只读取与目标分析相关的证据，而不是反复读取整本 PDF。这样可以把 Token 用在真正有信息密度的材料上，减少重复上下文、低价值正文和无关章节带来的消耗。
+Skills 层位于证据层和写作层之间，负责把原始证据转成结构化分析中间结果。当前重点 Skills 包括：
 
-这种设计让系统更适合长期使用和多轮扩展：新增一个分析视角时，不需要重新把全部原始文档喂给模型，而是复用已经解析好的文档资产和证据层。
+- `business_goal_decompose`：把公司业务拆成可分析的商业目标和收入逻辑。
+- `capability_match`：把技术、产品、客户、场景和商业化能力对应起来。
+- `tension_expand`：展开增长叙事中的约束、矛盾和关键不确定性。
+- `reader_value_translate`：把证据翻译成读者真正关心的判断和问题。
 
-### 多 Prompt 与 Skills 拓展空间
+这些 Skills 已接入 LLM 调用，同时保留 fallback。也就是说，LLM 可用于提升分析质量，但单个 Skills 失败时不会让整条报告链路直接断掉。
 
-项目把写作规则、报告视角和生成约束放在配置层，例如：
+Skills 的配置和编排可以继续扩展，适合后续加入财务质量、募投项目、客户集中度、行业竞争格局、多公司对比等新视角。
 
-```text
-configs/report_prompt.yaml
-```
+### 3. 两段式可拔插重写层
 
-这意味着后续可以接入多套 Prompt 或 Skills，针对不同分析目标生成不同类型的内容：
-
-- 公司基本面解读
-- 行业与竞争格局分析
-- 财务质量分析
-- 募投项目分析
-- 风险因素提取
-- 个人投资视角报告
-- 认知与商业模式视角报告
-- 多公司横向对比
-
-由于底层 evidence packet 已经统一，新增分析模块时不需要重新设计 PDF 解析流程，只需要新增 prompt、skill 或生成策略。
-
-### RAG 能力
-
-项目天然具备较强的检索增强生成能力。原因是它已经把原始 PDF 拆成了适合检索和引用的结构：
-
-- `blocks.jsonl`：可作为文本块检索基础。
-- `canonical_ast.json`：可按统一章节语义筛选上下文。
-- `tables/*.json`：可作为结构化表格证据。
-- `evidence_packet.json`：可作为高质量候选证据集合。
-- `citation.json`：可把生成结果反查回原文位置。
-
-这使系统可以从“整本 PDF 一次性总结”升级为“按问题检索证据，再基于证据生成回答”的 RAG 工作流。
-
-## 自动抓取层
-
-项目包含 A 股招股说明书自动抓取前置层：
+现在的重写层分成两层，二者都可以自定义、替换和拔插：
 
 ```text
-src/ipo_evidence/source_sync/
-  client.py
-  filters.py
-  downloader.py
-  state.py
-  service.py
-  cli.py
+Skills 输出
+  -> 草稿重写层
+  -> 叙事重写层
+  -> 最终 report.md
 ```
 
-它负责：
+草稿重写层负责把证据和 Skills 输出整理成可组合的段落、章节草稿和逻辑骨架。它更关注结构完整、引用可追踪、不同分析模块之间能否接上。
 
-- 从披露源发现候选招股说明书。
-- 过滤提示性公告、摘要、问询回复、法律意见书等非正文文件。
-- 下载允许进入主链路的 PDF。
-- 写入 discovery、filter、download 和 sync state 日志。
-- 保留公告 ID、来源 URL、本地路径、文件哈希、披露阶段和 OCR 状态等边界字段。
+叙事重写层负责把草稿变成自然的研究报告表达。当前由 `narrative_engine.py` 和 `configs/prompts/narrative_writer.yaml` 驱动，可以通过 prompt、章节约束和写作规则调整报告风格。
 
-自动抓取层不会直接修改证据包或报告。它只把合格 PDF 放入 `data/inbox/`，后续继续走统一处理链路。
+这种分层避免把“事实抽取、分析判断、语言表达”混在一个 prompt 里。后续要换写作风格、换分析框架、换某个 Skills，都不需要推翻底层证据资产。
 
-## 本地 Web 阅读器
+## Web 阅读器
 
-项目包含一个本地 Vite React 阅读器，负责后续使用：
+Web 端位于 `web/`，使用 Vite + React。
 
-- 查看文档列表。
-- 按真实文档包异步加载 `reader_bundle.json`。
-- 阅读生成后的连续长版报告。
-- 点击 citation 在右侧抽屉查看来源页码、文本块、表格字段和原文摘要。
-- 在“正文优先阅读”和“随手核查引用”之间切换，而不是停留在工具式面板布局。
+当前阅读器能力：
 
-Web 阅读器不是临时生成器，而是预生成资产的阅读和验证界面。这样可以避免打开页面时才临时调用模型，也更适合对报告进行复查和沉淀。
+- 左侧文档树。
+- 按官方 IPO 发布时间分组。
+- 按行业分组。
+- 报告标题只展示公司名称。
+- 阅读区内 citation 可点击。
+- Citation 抽屉展示原文 quote、页码、章节路径和表格定位。
 
-## 技术栈
+本地开发：
 
-- Python 3.11+
-- Pydantic
-- PyYAML
-- Requests
-- Vite
-- React
-- TypeScript
-- Vitest
-- Pytest
-
-## 快速开始
-
-安装 Python 依赖：
-
-```powershell
-python -m pip install -e ".[dev]"
+```bash
+cd web
+npm run dev
 ```
 
-安装前端依赖：
+生产展示构建：
 
-```powershell
-npm install --prefix web
+```bash
+cd web
+npm run build:pages
 ```
 
-将招股书 PDF 放入：
+Pages 构建默认读取 `web/showcase-data/`，它只包含展示所需的 `index.json` 和 `reader_bundle.json`，不包含 PDF、OCR 原文、blocks、tables、evidence packet 等完整研究数据。
+
+## GitHub Pages 展示
+
+公开展示页只作为 demo：
+
+- 不同步本地 `data/`。
+- 不发布原始 PDF。
+- 不发布 OCR 中间产物。
+- 不发布完整 evidence packet。
+- 只发布已经成型的报告阅读包和可点击 citation。
+
+展示地址：
 
 ```text
-data/inbox/
+https://pluto-mo.github.io/first-signal/
 ```
 
-运行本地处理链路：
+## 常用命令
 
-```powershell
+抓取最近 A 股 IPO 招股书：
+
+```bash
+python -m ipo_evidence.cli sync-a-share --days 7 --limit 3
+```
+
+扫描本地 PDF 输入池：
+
+```bash
 python -m ipo_evidence.cli scan-inbox
-python -m ipo_evidence.cli run --limit 3
 ```
 
-重新生成已有文档包的报告：
+生成指定文档报告：
 
-```powershell
-python -m ipo_evidence.cli generate-report --doc-id <doc_id>
+```bash
+python -m ipo_evidence.cli generate-report --doc-id doc_beaac21be4b3
 ```
 
-运行 A 股抓取前置层：
+重建 Web 索引：
 
-```powershell
-python -m ipo_evidence.source_sync.cli sync-a-share --days 7 --limit 3
+```bash
+python -m ipo_evidence.cli build-web-index
 ```
 
-启动 Web 阅读器：
+运行 Python 测试：
 
-```powershell
-npm run web:dev
+```bash
+pytest
 ```
 
-构建 Web 应用：
+运行 Web 测试和构建：
 
-```powershell
-npm run web:build
+```bash
+cd web
+npm test
+npm run build:pages
 ```
 
-## 验证
+## 目录约定
 
-后端测试：
+```text
+configs/
+  prompts/
+  skills/
+  skill_packages/
 
-```powershell
-python -m pytest -q
+data/
+  inbox/
+  docs/
+  tmp/
+
+src/ipo_evidence/
+  source_sync/
+  parser/
+  evidence/
+  skill_executor.py
+  narrative_engine.py
+  web_index.py
+
+web/
+  src/
+  showcase-data/
+  dist/
 ```
 
-前端测试：
+`data/inbox/`、`data/docs/` 和 `data/tmp/` 是本地工作数据，不进入 GitHub Pages 展示包。
 
-```powershell
-npm --prefix web run test
+## 质量边界
+
+系统使用三档质量状态：
+
+```text
+safe_to_use
+manual_review
+do_not_use
 ```
 
-前端构建：
-
-```powershell
-npm --prefix web run build
-```
-
-小规模本地链路验证：
-
-```powershell
-python -m ipo_evidence.cli run --limit 1
-```
-
-## 当前状态
-
-当前项目已经覆盖完整主流程：
-
-- A 股招股书自动抓取入口。
-- 本地 PDF 输入池。
-- PDF 解析与文档资产化。
-- Markdown、blocks、章节树与结构化表格产出。
-- evidence packet 构建。
-- RAG 上下文组织。
-- 模块化报告生成。
-- citation 反查。
-- `reader_bundle.json` 阅读资产生成。
-- 本地 Web 连续阅读与 citation 抽屉核查。
-
-后续可以继续扩展：
-
-- 港股招股书兼容。
-- 多公司横向比较。
-- 版本 diff。
-- 股权结构图和组织结构图抽取。
-- 更复杂的检索层和向量索引。
-- 更多 Prompt、Skills 和分析模板。
-
-## 免责声明
-
-本项目用于个人研究、学习和证据组织。生成内容不构成投资建议、交易建议、法律意见或审计结论。
+解析失败、引用不足、表格质量低或章节结构不完整时，应显式记录状态和原因。最终报告不能把证据不足的内容伪装成确定结论。

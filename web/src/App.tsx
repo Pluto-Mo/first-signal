@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { CitationDrawer } from "./components/CitationDrawer";
-import { DocumentList } from "./components/DocumentList";
+import { DocumentTree } from "./components/DocumentTree";
+import { GroupingTabs } from "./components/GroupingTabs";
 import { ReportReader } from "./components/ReportReader";
 import { loadDocsIndex, loadReaderBundle } from "./lib/api";
-import type { DocsIndexItem, ReaderBundle, ReaderCitation } from "./lib/types";
+import { groupByIndustry, groupByTime } from "./lib/grouping";
+import type {
+  DocsIndexItem,
+  GroupingMode,
+  ReaderBundle,
+  ReaderCitation
+} from "./lib/types";
 
 function buildCitationLookup(citations: ReaderCitation[]) {
   return Object.fromEntries(citations.map((citation) => [citation.id, citation]));
@@ -14,6 +21,7 @@ export default function App() {
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [bundlesById, setBundlesById] = useState<Record<string, ReaderBundle>>({});
   const [selectedCitationId, setSelectedCitationId] = useState<string | null>(null);
+  const [groupingMode, setGroupingMode] = useState<GroupingMode>("time");
   const [isIndexLoading, setIsIndexLoading] = useState(true);
   const [isBundleLoading, setIsBundleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +113,13 @@ export default function App() {
     (document) => document.doc_id === selectedDocumentId
   );
   const bundle = selectedDocumentId ? bundlesById[selectedDocumentId] ?? null : null;
+  const documentGroups = useMemo(
+    () =>
+      groupingMode === "time"
+        ? groupByTime(documents)
+        : groupByIndustry(documents),
+    [documents, groupingMode]
+  );
 
   useEffect(() => {
     if (!bundle) {
@@ -126,6 +141,7 @@ export default function App() {
 
   function handleDocumentSelect(documentId: string) {
     setSelectedDocumentId(documentId);
+    setSelectedCitationId(null);
   }
 
   const isLoading = isIndexLoading || (selectedDocumentId !== null && isBundleLoading && !bundle);
@@ -133,36 +149,36 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div>
-          <p className="eyebrow">IPO Evidence Intelligence</p>
-          <h1>A股招股书证据阅读台</h1>
-        </div>
-        <p className="app-subtitle">
-          正文优先阅读，引用与来源定位放在右侧，适合边读边核。
-        </p>
+        <h1>IPO 招股书研报</h1>
       </header>
 
       {error ? <p className="app-status">{error}</p> : null}
       {isLoading ? <p className="app-status">正在加载本地文档包...</p> : null}
-      {!isLoading && documents.length === 0 ? (
+      {!isIndexLoading && documents.length === 0 ? (
         <p className="app-status">当前没有可阅读的本地文档包。</p>
       ) : null}
 
-      {!isLoading && selectedDocument && bundle ? (
+      {!isIndexLoading && documents.length > 0 ? (
         <main className={`workspace is-immersive${citation ? " has-drawer" : ""}`}>
-          <div className="main-column">
-            <DocumentList
-              documents={documents}
-              selectedDocumentId={selectedDocument.doc_id}
+          <aside className="sidebar" aria-label="文档导航">
+            <GroupingTabs mode={groupingMode} onModeChange={setGroupingMode} />
+            <DocumentTree
+              groups={documentGroups}
+              selectedDocumentId={selectedDocumentId}
               onSelect={handleDocumentSelect}
             />
-            <ReportReader
-              title={bundle.report_title}
-              sections={bundle.sections}
-              selectedCitationId={selectedCitationId}
-              citationLookup={citationLookup}
-              onCitationSelect={setSelectedCitationId}
-            />
+          </aside>
+
+          <div className="main-column">
+            {selectedDocument && bundle ? (
+              <ReportReader
+                title={selectedDocument.company_name}
+                sections={bundle.sections}
+                selectedCitationId={selectedCitationId}
+                citationLookup={citationLookup}
+                onCitationSelect={setSelectedCitationId}
+              />
+            ) : null}
           </div>
 
           {citation ? <CitationDrawer citation={citation} onClose={() => setSelectedCitationId(null)} /> : null}

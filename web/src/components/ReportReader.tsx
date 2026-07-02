@@ -24,7 +24,6 @@ export function ReportReader({
     <section className="report-reader" aria-labelledby="report-reader-title">
       <div className="panel-header reader-header">
         <div>
-          <p className="eyebrow">阅读</p>
           <h2 id="report-reader-title">{title}</h2>
         </div>
       </div>
