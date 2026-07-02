@@ -113,6 +113,7 @@ Skills 输出
 ## 📊 在线演示
 
 **Live Demo:** [https://pluto-mo.github.io/first-signal/](https://pluto-mo.github.io/first-signal/)
+<img width="2712" height="1547" alt="image" src="https://github.com/user-attachments/assets/2799a89d-bde6-40ff-a84e-dd8c3284f738" />
 
 在线演示展示了完整的阅读体验：
 - 左侧树形导航（时间分组和行业分组）
