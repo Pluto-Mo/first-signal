@@ -174,7 +174,7 @@ flowchart LR
 ## 🔧 核心设计
 
 ### 1. 证据先于表达
-
+学习IPO-MINE项目（https://github.com/gtfintechlab/IPO-Mine.git ）对IPO文件的数据集处理方式。
 系统首先将 PDF 拆解成可检索、可定位、可引用的长期资产，再基于这些资产生成报告。
 
 **数据流：**
@@ -205,7 +205,8 @@ Skills 层位于证据层和写作层之间，负责将原始证据转化为结�
 - 可添加新 Skills（如财务质量、募投项目、客户集中度）
 - 可自定义 Skills 的权重和组合策略
 - 支持多公司对比和行业竞争格局分析
-
+- 可成长为完整的harness，在任何的agent工具里运行
+  
 ### 3. 质量边界管理
 
 系统使用三档质量状态，确保输出的可靠性：
@@ -265,12 +266,6 @@ cd web
 npm run dev
 ```
 
-**构建 GitHub Pages 展示包：**
-```bash
-cd web
-npm run build:pages
-```
-
 ---
 
 ## 📁 项目结构
@@ -316,11 +311,6 @@ docs/                     # 文档
 - ✅ 树形文档导航
 - ✅ 时间和行业分组
 
-**隐私保护：**
-- 不同步本地 `data/` 目录
-- 不发布原始 PDF 文件
-- 不发布 OCR 中间产物
-- 不发布完整 evidence packet
 
 展示地址：[https://pluto-mo.github.io/first-signal/](https://pluto-mo.github.io/first-signal/)
 
