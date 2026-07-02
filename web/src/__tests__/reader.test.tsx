@@ -11,11 +11,14 @@ afterEach(() => {
 describe("reader app", () => {
   test("renders a continuous article and opens citations in a drawer", async () => {
     const user = userEvent.setup();
+    const createdAt = new Date().getTime();
     const docsIndex = [
       {
         doc_id: "doc_test",
         company_name: "测试股份有限公司",
         source_file: "测试股份有限公司招股说明书.pdf",
+        industry: "智能制造",
+        created_at: createdAt,
         quality_status: "safe_to_use",
         parse_status: "parsed",
         report_status: "reported",
@@ -120,18 +123,37 @@ describe("reader app", () => {
 
     render(<App />);
 
+    expect(
+      await screen.findByRole("heading", { name: "IPO 招股书研报" })
+    ).toBeInTheDocument();
+    expect(screen.queryByText("A股招股书证据阅读台")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("正文优先阅读，引用与来源定位放在右侧，适合边读边核。")
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "按时间" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    expect(screen.getByRole("button", { name: "最近三天，1 份文档" })).toBeInTheDocument();
     expect(await screen.findByText("测试股份有限公司")).toBeInTheDocument();
     expect(
-      screen.getAllByText("导语判断，适合作为总览入口。").length
+      (await screen.findAllByText("导语判断，适合作为总览入口。")).length
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByText("公司主营业务集中在智能控制器。").length
+      (await screen.findAllByText("公司主营业务集中在智能控制器。")).length
     ).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("heading", { name: "测试股份有限公司", level: 2 })
+    ).toBeInTheDocument();
+    expect(screen.queryByText("测试股份有限公司招股书长篇阅读")).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "一、业务概况" })).not.toBeInTheDocument();
     expect(screen.queryByText("引用 C-001")).not.toBeInTheDocument();
 
     const citationChip = screen.getByRole("button", { name: /查看引用 C-002/ });
     expect(citationChip).toHaveClass("citation-chip");
+
+    await user.click(screen.getByRole("tab", { name: "按行业" }));
+    expect(screen.getByRole("button", { name: "智能制造，1 份文档" })).toBeInTheDocument();
 
     await user.click(citationChip);
 

@@ -15,6 +15,9 @@ def doc_id_for_file(path: Path) -> str:
 
 def company_name_from_filename(path: Path) -> str:
     stem = path.stem
+    sync_match = re.match(r"\d{4}-\d{2}-\d{2}__(.+?)__\d+$", stem)
+    if sync_match:
+        return sync_match.group(1).strip(" _-")
     match = re.search(r"(.+?)(?:招股说明书|首次公开发行|招股书)", stem)
     if match:
         return match.group(1).strip(" _-")

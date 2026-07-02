@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from ipo_evidence.io import write_json
-from ipo_evidence.ingest import scan_inbox
+from ipo_evidence.ingest import company_name_from_filename, scan_inbox
 from ipo_evidence.models import Manifest
 
 
@@ -18,6 +18,13 @@ def test_scan_inbox_creates_manifest_for_pdf(tmp_path: Path):
     assert manifest_path.exists()
     assert created[0].company_name == "测试股份有限公司"
     assert created[0].source_file == "测试股份有限公司招股说明书.pdf"
+
+
+def test_company_name_from_source_sync_filename():
+    assert (
+        company_name_from_filename(Path("2026-06-25__康美特__1225388617.pdf"))
+        == "康美特"
+    )
 
 
 def test_scan_inbox_is_idempotent(tmp_path: Path):
