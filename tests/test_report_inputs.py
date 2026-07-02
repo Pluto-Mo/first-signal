@@ -291,9 +291,11 @@ def test_architecture_config_files_are_loadable():
         "configs/skills/disclosure_gap_scan.yaml",
         "configs/skills/reader_value_translate.yaml",
         "configs/skills/tension_expand.yaml",
+        "configs/skill_packages/ipo_prospectus_analysis.yaml",
         "configs/prompts/section_writer.yaml",
         "configs/prompts/stitch_writer.yaml",
         "configs/prompts/citation_checker.yaml",
+        "configs/prompts/narrative_writer.yaml",
     ]
 
     for path in paths:

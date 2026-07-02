@@ -15,6 +15,7 @@ from ipo_evidence.models import (
 
 
 HEADING_RE = re.compile(r"^##\s+(.+)$")
+SUBHEADING_RE = re.compile(r"^###\s+(.+)$")
 CITATION_RE = re.compile(r"\[(C-\d{3})\]")
 
 
@@ -78,7 +79,13 @@ def _reader_citations(citations: list[Citation], packet: EvidencePacket) -> list
 
 def _build_section(section_id: int, title: str, body: str) -> ReaderSection | None:
     blocks: list[ReaderBlock] = []
-    for block_index, paragraph in enumerate(_paragraphs(body), start=1):
+    pending_title: str | None = None
+    block_index = 1
+    for paragraph in _paragraphs(body):
+        subheading = SUBHEADING_RE.match(paragraph)
+        if subheading:
+            pending_title = subheading.group(1).strip()
+            continue
         cleaned = _clean_body(paragraph)
         if not cleaned:
             continue
@@ -86,10 +93,13 @@ def _build_section(section_id: int, title: str, body: str) -> ReaderSection | No
             ReaderBlock(
                 id=f"section-{section_id:03d}-block-{block_index:03d}",
                 kind="lead" if block_index == 1 else "finding",
+                title=pending_title,
                 body=cleaned,
                 citation_ids=CITATION_RE.findall(paragraph),
             )
         )
+        pending_title = None
+        block_index += 1
     if not blocks:
         return None
     return ReaderSection(id=f"section-{section_id:03d}", title=title, blocks=blocks)

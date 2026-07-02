@@ -5,3 +5,13 @@ requires:
   - "evidence_chain"
 produces:
   - "gap_note"
+  - "structured_conclusion"
+
+output_schema:
+  interpretation:
+    critical_gaps: "list[string]"
+    possible_reasons: "list[string]"
+    workarounds: "list[string]"
+  evidence_chain: "list[string]"
+  confidence: "high | medium | low"
+  gaps: "list[dict]"

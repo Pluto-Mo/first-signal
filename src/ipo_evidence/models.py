@@ -74,6 +74,14 @@ class EvidencePacket(BaseModel):
     items: list[EvidenceItem]
 
 
+class SkillInterpretation(BaseModel):
+    skill_key: str
+    interpretation: dict[str, Any] = Field(default_factory=dict)
+    evidence_chain: list[str] = Field(default_factory=list)
+    confidence: Literal["high", "medium", "low"]
+    gaps: list[dict[str, str]] = Field(default_factory=list)
+
+
 class Citation(BaseModel):
     citation_id: str
     type: Literal["text_quote", "table_fact"]

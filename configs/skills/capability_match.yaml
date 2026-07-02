@@ -5,3 +5,14 @@ requires:
   - "evidence_chain"
 produces:
   - "capability_judgment"
+  - "structured_conclusion"
+
+output_schema:
+  interpretation:
+    strengths: "list[string]"
+    weaknesses: "list[string]"
+    tension: "string"
+    resource_allocation: "string"
+  evidence_chain: "list[string]"
+  confidence: "high | medium | low"
+  gaps: "list[dict]"

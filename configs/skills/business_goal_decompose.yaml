@@ -5,3 +5,15 @@ requires:
   - "core_claim"
 produces:
   - "business_question"
+  - "structured_conclusion"
+
+output_schema:
+  interpretation:
+    business_goal: "string"
+    product_entry: "list[string]"
+    target_scenario: "list[string]"
+    customer_type: "string"
+    revenue_structure: "string"
+  evidence_chain: "list[string]"
+  confidence: "high | medium | low"
+  gaps: "list[dict]"

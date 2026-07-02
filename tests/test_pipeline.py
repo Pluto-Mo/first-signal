@@ -19,6 +19,51 @@ def stub_parser_config(monkeypatch: pytest.MonkeyPatch):
         "load_yaml",
         lambda _relative_path: {"provider": "api_stub"},
     )
+    monkeypatch.setattr(
+        "ipo_evidence.narrative_engine.call_agent_for_narrative",
+        lambda **_kwargs: (
+            "这是一篇由 LLM 生成的自然报告。[C-001]\n\n"
+            "第二段继续讨论业务与风险。[C-002]\n\n"
+            "结尾提醒读者继续核查收入质量。[C-003]"
+        ),
+    )
+    monkeypatch.setattr(
+        "ipo_evidence.skill_executor.call_claude_for_skill",
+        lambda **kwargs: _skill_llm_stub(kwargs["skill_name"]),
+    )
+
+
+def _skill_llm_stub(skill_name: str) -> str:
+    if skill_name == "business_goal_decompose":
+        return """
+        {
+          "business_goal": "把 AI 能力装进终端硬件",
+          "product_entry": ["AI 芯片", "智慧办公硬件"],
+          "target_scenario": ["智慧出行", "会议"],
+          "customer_type": "B2B",
+          "revenue_structure": "硬件和解决方案收入为主"
+        }
+        """
+    if skill_name == "capability_match":
+        return """
+        {
+          "strengths": ["产品覆盖多场景", "研发投入持续"],
+          "weaknesses": ["现金流波动", "客户集中风险"],
+          "tension": "多场景放量能力与盈利质量压力并存",
+          "resource_allocation": "资源集中投向研发和场景交付"
+        }
+        """
+    if skill_name == "tension_expand":
+        return """
+        {
+          "tension_point": "收入增长与现金流压力并存",
+          "positive_side": "产品和收入持续扩张",
+          "negative_side": "现金流波动和亏损仍需验证",
+          "tradeoff_logic": "扩张期投入支撑增长，但短期压低盈利质量",
+          "future_path": ["提高客户分散度", "验证研发转化效率"]
+        }
+        """
+    return "{}"
 
 
 def test_run_one_creates_document_package(tmp_path: Path):
@@ -46,6 +91,7 @@ def test_run_one_creates_document_package(tmp_path: Path):
     assert (package / "report.md").exists()
     assert (package / "citation.json").exists()
     assert (package / "analysis_log.json").exists()
+    assert (package / "narrative_trace.json").exists()
     assert (package / "reader_bundle.json").exists()
     assert (package / "web_index.json").exists()
     docs_index = read_json(docs / "index.json")
@@ -60,9 +106,9 @@ def test_run_one_creates_document_package(tmp_path: Path):
     assert report_text.count("{'") == 0
     assert "对应数据为" not in report_text
     assert report_text.count("[C-") <= 50
-    assert "本文基于招股说明书中已抽取的可引用证据" in report_text
-    assert "读这份招股书" not in report_text
-    assert "公司介绍与行业概况" in report_text
+    assert report_text.startswith("# 测试股份有限公司招股书长篇阅读")
+    assert "这是一篇由 LLM 生成的自然报告" in report_text
+    assert "能力上，它的正面线索" not in report_text
     citations = read_json(package / "citation.json")
     citation_ids = {citation["citation_id"] for citation in citations}
     assert set(re.findall(r"\[(C-\d{3})\]", report_text)) <= citation_ids
@@ -71,7 +117,7 @@ def test_run_one_creates_document_package(tmp_path: Path):
     web_index = read_json(package / "web_index.json")
     assert manifest["report_status"] == "reported"
     assert reader_bundle["report_status"] == "reported"
-    assert any(section["title"] == "公司介绍与行业概况" for section in reader_bundle["sections"])
+    assert any(section["title"] == "总览" for section in reader_bundle["sections"])
     assert web_index["report_status"] == "reported"
 
 
@@ -153,11 +199,16 @@ def test_regenerate_report_rewrites_report_and_citations(tmp_path: Path):
     analysis_log = read_json(analysis_log_path)
     reader_bundle = read_json(package / "reader_bundle.json")
     web_index = read_json(package / "web_index.json")
+    narrative_trace = read_json(package / "narrative_trace.json")
 
     assert "broken report" not in report_text
     assert "# 测试股份有限公司招股书长篇阅读" in report_text
     assert citations[0]["citation_id"] == "C-001"
     assert analysis_log["doc_id"] == doc_id
+    assert narrative_trace["skills_used"]
+    assert narrative_trace["skill_outputs"]["business_goal_decompose"]["interpretation"]["business_goal"]
+    assert len(narrative_trace["skill_outputs"]["capability_match"]["interpretation"]["strengths"]) <= 5
+    assert narrative_trace["llm_used"] is True
     assert reader_bundle["report_title"] == "测试股份有限公司招股书长篇阅读"
     assert web_index["doc_id"] == doc_id
     assert web_index["company_name"] == "测试股份有限公司"

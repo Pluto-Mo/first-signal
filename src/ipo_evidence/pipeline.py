@@ -12,7 +12,7 @@ from ipo_evidence.models import EvidencePacket, Manifest, QualityStatus
 from ipo_evidence.parser import create_parser
 from ipo_evidence.quality_gate import apply_quality_gate
 from ipo_evidence.reader_bundle import build_reader_bundle
-from ipo_evidence.report_assembler import assemble_report
+from ipo_evidence.report_generator import generate_narrative_report
 from ipo_evidence.report_inputs import build_report_inputs
 from ipo_evidence.section_generator import generate_section_drafts
 from ipo_evidence.section_mapper import assign_section_paths, build_source_ast, map_canonical_sections
@@ -86,12 +86,10 @@ def _write_report_artifacts(
     section_drafts = generate_section_drafts(packet, report_inputs)
     quality_decisions = apply_quality_gate(section_drafts, _evidence_policies(report_inputs))
     analysis_log = build_analysis_log(packet.doc_id, quality_decisions)
-    valid_citation_ids = {citation.citation_id for citation in citations}
-    report = assemble_report(
+    report, narrative_trace = generate_narrative_report(
         manifest.company_name,
-        section_drafts,
-        quality_decisions,
-        valid_citation_ids=valid_citation_ids,
+        packet,
+        report_inputs,
     )
     reader_bundle = build_reader_bundle(manifest, report, citations, packet)
     web_index = build_web_index(manifest)
@@ -102,6 +100,7 @@ def _write_report_artifacts(
         [citation.model_dump(mode="json") for citation in citations],
     )
     write_json(package_dir / "analysis_log.json", analysis_log)
+    write_json(package_dir / "narrative_trace.json", narrative_trace)
     write_json(package_dir / "reader_bundle.json", reader_bundle)
     write_json(package_dir / "web_index.json", web_index)
 

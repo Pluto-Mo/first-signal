@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from copy import deepcopy
 from functools import cache
 from pathlib import Path
+from typing import Any
 
 from ipo_evidence.config import load_yaml
 from ipo_evidence.paths import repo_root
@@ -22,6 +24,14 @@ class SkillConfig:
     action: str
     requires: list[str]
     produces: list[str]
+    output_schema: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class SkillPackageConfig:
+    package_key: str
+    title: str
+    skills: list[str]
 
 
 def _string_list(value: object) -> list[str]:
@@ -60,9 +70,26 @@ def _skill_index() -> dict[str, SkillConfig]:
             action=data["action"],
             requires=_string_list(data.get("requires")),
             produces=_string_list(data.get("produces")),
+            output_schema=deepcopy(data.get("output_schema", {}))
+            if isinstance(data.get("output_schema"), dict)
+            else {},
         )
         skills[skill.skill_key] = skill
     return skills
+
+
+@cache
+def _skill_package_index() -> dict[str, SkillPackageConfig]:
+    packages: dict[str, SkillPackageConfig] = {}
+    for path in _yaml_files("configs/skill_packages"):
+        data = load_yaml(path.relative_to(repo_root()).as_posix())
+        package = SkillPackageConfig(
+            package_key=data["package_key"],
+            title=data["title"],
+            skills=_string_list(data.get("skills")),
+        )
+        packages[package.package_key] = package
+    return packages
 
 
 def load_prompt_config(prompt_slot: str) -> PromptConfig:
@@ -91,6 +118,19 @@ def load_skill_configs(skill_refs: list[str]) -> list[SkillConfig]:
                 action=skill.action,
                 requires=list(skill.requires),
                 produces=list(skill.produces),
+                output_schema=deepcopy(skill.output_schema),
             )
         )
     return loaded
+
+
+def load_skill_package_config(package_key: str) -> SkillPackageConfig:
+    packages = _skill_package_index()
+    if package_key not in packages:
+        raise ValueError(f"unknown skill_package: {package_key}")
+    package = packages[package_key]
+    return SkillPackageConfig(
+        package_key=package.package_key,
+        title=package.title,
+        skills=list(package.skills),
+    )

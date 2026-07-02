@@ -5,3 +5,14 @@ requires:
   - "core_claim"
 produces:
   - "reader_value"
+  - "structured_conclusion"
+
+output_schema:
+  interpretation:
+    for_tech_people: "string"
+    for_investors: "string"
+    for_practitioners: "string"
+    for_consumers: "string"
+  evidence_chain: "list[string]"
+  confidence: "high | medium | low"
+  gaps: "list[dict]"
