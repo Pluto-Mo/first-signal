@@ -34,6 +34,7 @@ runs/evals/*
 
 # Superpowers visual brainstorming scratch files
 .superpowers/
+.tmp/
 
 # Isolated implementation worktrees
 .worktrees/

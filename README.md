@@ -154,7 +154,7 @@ flowchart LR
 
 **后端：**
 - Python 3.11+
-- LLM 集成（Claude/Anthropic API）
+- LLM 集成：当前通过本地 agent CLI（`codex exec` 子进程）调用，接口抽象在 `llm_caller.py`，可替换为 Anthropic API
 - Pydantic 数据验证
 - 结构化文档处理
 
@@ -242,7 +242,7 @@ npm install
 
 **抓取最近 A 股 IPO 招股书：**
 ```bash
-python -m ipo_evidence.cli sync-a-share --days 7 --limit 3
+python -m ipo_evidence.source_sync.cli sync-a-share --days 7 --limit 3
 ```
 
 **扫描本地 PDF 输入池：**
@@ -255,15 +255,18 @@ python -m ipo_evidence.cli scan-inbox
 python -m ipo_evidence.cli generate-report --doc-id doc_beaac21be4b3
 ```
 
-**重建 Web 索引：**
-```bash
-python -m ipo_evidence.cli build-web-index
-```
+`web_index.json` 会随 `run` / `generate-report` 自动生成，不需要单独执行索引构建命令。
 
 **本地 Web 开发：**
 ```bash
 cd web
 npm run dev
+```
+
+**构建 GitHub Pages 展示包：**
+```bash
+cd web
+npm run build:pages
 ```
 
 ---
@@ -310,6 +313,12 @@ docs/                     # 文档
 - ✅ Citation 引用系统
 - ✅ 树形文档导航
 - ✅ 时间和行业分组
+
+**隐私保护：**
+- 不同步本地 `data/` 目录
+- 不发布原始 PDF 文件
+- 不发布 OCR 中间产物
+- 不发布完整 evidence packet
 
 
 展示地址：[https://pluto-mo.github.io/first-signal/](https://pluto-mo.github.io/first-signal/)
