@@ -1,4 +1,5 @@
 {
+  "private": true,
   "scripts": {
     "web:dev": "npm --prefix web run dev",
     "web:build": "npm --prefix web run build",

@@ -30,32 +30,56 @@
 
 ```text
 configs/
+  filter_rules.yaml
   parser.yaml
+  report_prompt.yaml
   section_mapper.yaml
   scoring_rules.yaml
   source_sync.yaml
-  filter_rules.yaml
+  prompts/
+  report_profiles/
+  skills/
+  skill_packages/
 
 data/
   inbox/
   docs/
   tmp/
 
-src/
-  ingest/
+src/ipo_evidence/
   parser/
-  section_mapper/
-  table_extractor/
-  evidence/
-  report_generator/
-  citation_layer/
   source_sync/
+  analysis_log.py
+  citation_layer.py
+  cli.py
+  config.py
+  evidence.py
+  ingest.py
+  io.py
+  llm_caller.py
+  models.py
+  narrative_engine.py
+  paths.py
+  pipeline.py
+  quality_gate.py
+  reader_bundle.py
+  report_assembler.py
+  report_generator.py
+  report_inputs.py
+  report_profiles.py
+  report_runtime.py
+  section_generator.py
+  section_mapper.py
+  section_writer.py
+  skill_executor.py
+  table_extractor.py
+  web_index.py
 
 web/
-  app/
-  components/
-  lib/
-  styles/
+  src/
+    components/
+    lib/
+  showcase-data/
 
 runs/
   logs/
@@ -64,6 +88,7 @@ runs/
 docs/
   report_generation_architecture.md
   product/
+  superpowers/plans/
   superpowers/specs/
 ```
 
@@ -143,21 +168,24 @@ do_not_use
 当前设计阶段可用验证：
 
 ```text
+python -m pytest -q
+python -m ipo_evidence.cli --help
+python -m ipo_evidence.source_sync.cli --help
 git status --short
 ```
 
 处理链路实现后应提供并维护：
 
 ```text
-python -m src.ingest.scan_inbox
-python -m src.pipeline.run --limit 3
-python -m src.report_generator.generate --doc-id <doc_id>
+python -m ipo_evidence.cli scan-inbox
+python -m ipo_evidence.cli run --limit 3
+python -m ipo_evidence.cli generate-report --doc-id <doc_id>
 ```
 
 自动抓取前置层实现后应提供并维护：
 
 ```text
-python -m src.source_sync.sync_a_share --days 7 --limit 3
+python -m ipo_evidence.source_sync.cli sync-a-share --days 7 --limit 3
 ```
 
 Web 实现后应提供并维护：
@@ -165,6 +193,7 @@ Web 实现后应提供并维护：
 ```text
 npm run dev
 npm run build
+npm test
 ```
 
 如果验证命令尚未实现，最终回复中必须说明未运行的原因。
