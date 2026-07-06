@@ -1,25 +1,29 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import tempfile
+from collections.abc import Mapping
 from pathlib import Path
 
 from ipo_evidence.paths import repo_root
 
 
+_SENSITIVE_ENV_NAME = re.compile(r"TOKEN|SECRET|KEY|PASSWORD|CREDENTIAL", re.IGNORECASE)
+
+
 def call_agent_for_narrative(
     user_prompt: str,
     system_prompt: str,
-    max_tokens: int = 4000,
     timeout: int = 120,
     *,
     agent_command: str = "codex",
     cwd: Path | None = None,
 ) -> str:
-    del max_tokens
-    workspace = cwd or repo_root()
+    workspace = cwd or _default_agent_workspace()
+    workspace.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".txt", delete=False) as handle:
         output_path = Path(handle.name)
 
@@ -37,32 +41,40 @@ def call_agent_for_narrative(
     ]
 
     try:
-        result = subprocess.run(
-            cmd,
-            input=prompt,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            encoding="utf-8",
-        )
-    except subprocess.TimeoutExpired as error:
-        raise TimeoutError(f"Agent CLI timed out after {timeout}s") from error
+        try:
+            result = subprocess.run(
+                cmd,
+                input=prompt,
+                env=_filtered_env(),
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                encoding="utf-8",
+                errors="replace",
+            )
+        except subprocess.TimeoutExpired as error:
+            raise TimeoutError(f"Agent CLI timed out after {timeout}s") from error
+        except OSError as error:
+            raise RuntimeError(f"Agent CLI not available: {redact_env_secrets(str(error))}") from error
 
-    if result.returncode != 0:
-        error_msg = result.stderr.strip() if result.stderr else "Unknown error"
-        raise RuntimeError(f"Agent CLI failed (exit {result.returncode}): {error_msg}")
+        if result.returncode != 0:
+            error_msg = result.stderr.strip() if result.stderr else "Unknown error"
+            raise RuntimeError(
+                f"Agent CLI failed (exit {result.returncode}): {redact_env_secrets(error_msg)}"
+            )
 
-    output = _read_last_message(output_path) or result.stdout.strip()
-    if not output:
-        raise RuntimeError("Agent CLI returned empty output")
-    return output.strip()
+        output = _read_last_message(output_path) or result.stdout.strip()
+        if not output:
+            raise RuntimeError("Agent CLI returned empty output")
+        return redact_env_secrets(output.strip())
+    finally:
+        output_path.unlink(missing_ok=True)
 
 
-def call_claude_for_skill(
+def call_llm_for_skill(
     skill_name: str,
     evidence_text: str,
     instruction: str,
-    max_tokens: int = 2000,
 ) -> str:
     system_prompt = f"""你是招股书分析专家，正在执行 {skill_name} 分析任务。
 
@@ -77,8 +89,34 @@ def call_claude_for_skill(
     return call_agent_for_narrative(
         user_prompt=user_prompt,
         system_prompt=system_prompt,
-        max_tokens=max_tokens,
     )
+
+
+def redact_env_secrets(text: str) -> str:
+    redacted = text
+    for value in _sensitive_env_values(os.environ):
+        redacted = redacted.replace(value, "[REDACTED]")
+    return redacted
+
+
+def _default_agent_workspace() -> Path:
+    return repo_root() / "data" / "tmp" / "agent_workspace"
+
+
+def _filtered_env() -> dict[str, str]:
+    return {name: value for name, value in os.environ.items() if not _is_sensitive_env_name(name)}
+
+
+def _sensitive_env_values(env: Mapping[str, str]) -> list[str]:
+    return [
+        value
+        for name, value in env.items()
+        if _is_sensitive_env_name(name) and len(value) >= 8
+    ]
+
+
+def _is_sensitive_env_name(name: str) -> bool:
+    return bool(_SENSITIVE_ENV_NAME.search(name))
 
 
 def _resolve_agent_command(agent_command: str) -> list[str]:

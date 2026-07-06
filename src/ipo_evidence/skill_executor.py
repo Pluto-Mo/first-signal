@@ -4,7 +4,7 @@ import json
 import re
 from typing import Any
 
-from ipo_evidence.llm_caller import call_claude_for_skill
+from ipo_evidence.llm_caller import call_llm_for_skill
 from ipo_evidence.models import (
     EvidenceItem,
     EvidencePacket,
@@ -137,11 +137,10 @@ def _execute_business_goal_decompose(
 
 不要输出任何解释，只输出 JSON。"""
     try:
-        response = call_claude_for_skill(
+        response = call_llm_for_skill(
             skill_name="business_goal_decompose",
             evidence_text=_format_evidence_text(relevant, citation_index, limit=200),
             instruction=instruction,
-            max_tokens=1000,
         )
         interpretation = _parse_json_object(response)
         if "business_goal" in interpretation:
@@ -184,11 +183,10 @@ def _execute_capability_match(
 
 不要输出任何解释，只输出 JSON。"""
     try:
-        response = call_claude_for_skill(
+        response = call_llm_for_skill(
             skill_name="capability_match",
             evidence_text=_format_evidence_text(relevant, citation_index, limit=150),
             instruction=instruction,
-            max_tokens=1500,
         )
         interpretation = _parse_json_object(response)
         interpretation["strengths"] = _compact_list(interpretation.get("strengths"), limit=5)
@@ -232,11 +230,10 @@ def _execute_tension_expand(
 
 不要输出任何解释，只输出 JSON。"""
     try:
-        response = call_claude_for_skill(
+        response = call_llm_for_skill(
             skill_name="tension_expand",
             evidence_text=_format_evidence_text(relevant, citation_index, limit=150),
             instruction=instruction,
-            max_tokens=1200,
         )
         interpretation = _parse_json_object(response)
         interpretation["future_path"] = _compact_list(interpretation.get("future_path"), limit=3)
@@ -292,11 +289,10 @@ def _execute_reader_value_translate(
 
 不要输出任何解释，只输出 JSON。"""
     try:
-        response = call_claude_for_skill(
+        response = call_llm_for_skill(
             skill_name="reader_value_translate",
             evidence_text=_format_evidence_text(relevant, citation_index, limit=200),
             instruction=instruction,
-            max_tokens=3000,
         )
         interpretation = _parse_json_object(response)
         return _skill_result("reader_value_translate", interpretation, relevant)

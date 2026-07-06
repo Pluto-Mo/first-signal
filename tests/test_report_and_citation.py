@@ -358,7 +358,7 @@ def test_generate_report_can_use_narrative_engine_migration_path(monkeypatch):
         lambda **_kwargs: "LLM 生成的迁移路径报告，提到公司主要产品包括 AI 芯片和智慧办公硬件。[C-001]",
     )
     monkeypatch.setattr(
-        "ipo_evidence.skill_executor.call_claude_for_skill",
+        "ipo_evidence.skill_executor.call_llm_for_skill",
         lambda **kwargs: (
             '{"business_goal":"把 AI 能力装进终端硬件","product_entry":["AI 芯片"],'
             '"target_scenario":["智慧办公"],"customer_type":"B2B","revenue_structure":"硬件收入为主"}'
