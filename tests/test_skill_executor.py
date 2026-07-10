@@ -50,7 +50,7 @@ def _packet() -> EvidencePacket:
 
 @pytest.fixture(autouse=True)
 def stub_skill_llm(monkeypatch):
-    def fake_call_claude_for_skill(**kwargs):
+    def fake_call_llm_for_skill(**kwargs):
         skill_name = kwargs["skill_name"]
         if skill_name == "business_goal_decompose":
             return """
@@ -94,7 +94,7 @@ def stub_skill_llm(monkeypatch):
             """
         return "{}"
 
-    monkeypatch.setattr("ipo_evidence.skill_executor.call_claude_for_skill", fake_call_claude_for_skill)
+    monkeypatch.setattr("ipo_evidence.skill_executor.call_llm_for_skill", fake_call_llm_for_skill)
 
 
 def test_execute_business_goal_decompose_returns_interpretation_payload():
@@ -119,7 +119,7 @@ def test_execute_business_goal_decompose_returns_interpretation_payload():
 def test_execute_business_goal_decompose_uses_llm_analysis(monkeypatch):
     calls = []
 
-    def fake_call_claude_for_skill(**kwargs):
+    def fake_call_llm_for_skill(**kwargs):
         calls.append(kwargs)
         return """
         {
@@ -132,8 +132,8 @@ def test_execute_business_goal_decompose_uses_llm_analysis(monkeypatch):
         """
 
     monkeypatch.setattr(
-        "ipo_evidence.skill_executor.call_claude_for_skill",
-        fake_call_claude_for_skill,
+        "ipo_evidence.skill_executor.call_llm_for_skill",
+        fake_call_llm_for_skill,
         raising=False,
     )
 
@@ -172,7 +172,7 @@ def test_execute_capability_match_returns_strengths_weaknesses_and_tension():
 
 
 def test_execute_capability_match_uses_llm_and_limits_core_points(monkeypatch):
-    def fake_call_claude_for_skill(**_kwargs):
+    def fake_call_llm_for_skill(**_kwargs):
         return """
         {
           "strengths": ["产品覆盖多场景", "研发投入持续", "客户验证明确"],
@@ -183,8 +183,8 @@ def test_execute_capability_match_uses_llm_and_limits_core_points(monkeypatch):
         """
 
     monkeypatch.setattr(
-        "ipo_evidence.skill_executor.call_claude_for_skill",
-        fake_call_claude_for_skill,
+        "ipo_evidence.skill_executor.call_llm_for_skill",
+        fake_call_llm_for_skill,
         raising=False,
     )
 
@@ -206,7 +206,7 @@ def test_execute_capability_match_uses_llm_and_limits_core_points(monkeypatch):
 
 
 def test_execute_tension_expand_uses_llm_tradeoff_logic(monkeypatch):
-    def fake_call_claude_for_skill(**_kwargs):
+    def fake_call_llm_for_skill(**_kwargs):
         return """
         {
           "tension_point": "收入增长与现金流压力并存",
@@ -218,8 +218,8 @@ def test_execute_tension_expand_uses_llm_tradeoff_logic(monkeypatch):
         """
 
     monkeypatch.setattr(
-        "ipo_evidence.skill_executor.call_claude_for_skill",
-        fake_call_claude_for_skill,
+        "ipo_evidence.skill_executor.call_llm_for_skill",
+        fake_call_llm_for_skill,
         raising=False,
     )
 
@@ -242,7 +242,7 @@ def test_execute_tension_expand_uses_llm_tradeoff_logic(monkeypatch):
 def test_execute_reader_value_translate_uses_llm_deep_trend_fields(monkeypatch):
     calls = []
 
-    def fake_call_claude_for_skill(**kwargs):
+    def fake_call_llm_for_skill(**kwargs):
         calls.append(kwargs)
         return """
         {
@@ -255,7 +255,7 @@ def test_execute_reader_value_translate_uses_llm_deep_trend_fields(monkeypatch):
         }
         """
 
-    monkeypatch.setattr("ipo_evidence.skill_executor.call_claude_for_skill", fake_call_claude_for_skill)
+    monkeypatch.setattr("ipo_evidence.skill_executor.call_llm_for_skill", fake_call_llm_for_skill)
 
     output = execute_skill(
         "reader_value_translate",
@@ -270,7 +270,6 @@ def test_execute_reader_value_translate_uses_llm_deep_trend_fields(monkeypatch):
 
     assert calls
     assert calls[0]["skill_name"] == "reader_value_translate"
-    assert calls[0]["max_tokens"] >= 3000
     assert "趋势" in calls[0]["instruction"]
     assert output.interpretation["trend_tech_position"]
     assert output.interpretation["trend_industry_impact"]
@@ -280,7 +279,7 @@ def test_execute_reader_value_translate_uses_llm_deep_trend_fields(monkeypatch):
 
 def test_execute_reader_value_translate_falls_back_when_agent_fails(monkeypatch):
     monkeypatch.setattr(
-        "ipo_evidence.skill_executor.call_claude_for_skill",
+        "ipo_evidence.skill_executor.call_llm_for_skill",
         lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("agent unavailable")),
     )
 
@@ -305,7 +304,7 @@ def test_execute_llm_skill_falls_back_when_agent_fails(monkeypatch):
         raise RuntimeError("agent unavailable")
 
     monkeypatch.setattr(
-        "ipo_evidence.skill_executor.call_claude_for_skill",
+        "ipo_evidence.skill_executor.call_llm_for_skill",
         raise_error,
         raising=False,
     )
@@ -328,7 +327,7 @@ def test_execute_llm_skill_falls_back_when_agent_fails(monkeypatch):
 
 def test_execute_skill_interpretation_uses_readable_compact_text(monkeypatch):
     monkeypatch.setattr(
-        "ipo_evidence.skill_executor.call_claude_for_skill",
+        "ipo_evidence.skill_executor.call_llm_for_skill",
         lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("agent unavailable")),
     )
 
@@ -377,7 +376,7 @@ def test_execute_skill_interpretation_uses_readable_compact_text(monkeypatch):
 
 def test_execute_skill_filters_low_value_transition_fragments(monkeypatch):
     monkeypatch.setattr(
-        "ipo_evidence.skill_executor.call_claude_for_skill",
+        "ipo_evidence.skill_executor.call_llm_for_skill",
         lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("agent unavailable")),
     )
 

@@ -28,7 +28,7 @@ def stub_parser_config(monkeypatch: pytest.MonkeyPatch):
         ),
     )
     monkeypatch.setattr(
-        "ipo_evidence.skill_executor.call_claude_for_skill",
+        "ipo_evidence.skill_executor.call_llm_for_skill",
         lambda **kwargs: _skill_llm_stub(kwargs["skill_name"]),
     )
 

@@ -87,7 +87,6 @@ def _call_narrative_writer(
         report_md = call_agent_for_narrative(
             user_prompt=user_prompt,
             system_prompt=system_prompt,
-            max_tokens=7000,
             timeout=240,
         )
         cleaned = _clean_llm_output(report_md)
@@ -97,7 +96,6 @@ def _call_narrative_writer(
                 call_agent_for_narrative(
                     user_prompt=retry_prompt,
                     system_prompt=system_prompt,
-                    max_tokens=7000,
                     timeout=240,
                 )
             )

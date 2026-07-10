@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from ipo_evidence.llm_caller import call_agent_for_narrative, call_claude_for_skill
+from ipo_evidence.llm_caller import call_agent_for_narrative, call_llm_for_skill
 
 
 def test_call_agent_for_narrative_invokes_codex_exec(monkeypatch):
@@ -22,7 +22,6 @@ def test_call_agent_for_narrative_invokes_codex_exec(monkeypatch):
     output = call_agent_for_narrative(
         user_prompt="请写报告",
         system_prompt="只输出正文",
-        max_tokens=1200,
         timeout=30,
     )
 
@@ -56,7 +55,52 @@ def test_call_agent_for_narrative_raises_runtime_error(monkeypatch):
         call_agent_for_narrative("prompt", "system")
 
 
-def test_call_claude_for_skill_reuses_agent_cli_wrapper(monkeypatch):
+def test_call_agent_for_narrative_wraps_missing_agent_cli(monkeypatch):
+    def fake_run(_cmd, **_kwargs):
+        raise FileNotFoundError("codex not found")
+
+    monkeypatch.setattr("ipo_evidence.llm_caller.subprocess.run", fake_run)
+
+    with pytest.raises(RuntimeError, match="Agent CLI not available"):
+        call_agent_for_narrative("prompt", "system")
+
+
+def test_call_agent_for_narrative_filters_sensitive_env(monkeypatch):
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        captured.update(kwargs)
+        return subprocess.CompletedProcess(cmd, 0, stdout="safe output", stderr="")
+
+    monkeypatch.setenv("PADDLEOCR_API_TOKEN", "secret-token-value")
+    monkeypatch.setenv("SAFE_RUNTIME_FLAG", "keep-me")
+    monkeypatch.setattr("ipo_evidence.llm_caller.subprocess.run", fake_run)
+    monkeypatch.setattr("ipo_evidence.llm_caller._read_last_message", lambda _path: "")
+
+    call_agent_for_narrative("prompt", "system")
+
+    child_env = captured["env"]
+    assert "PADDLEOCR_API_TOKEN" not in child_env
+    assert child_env["SAFE_RUNTIME_FLAG"] == "keep-me"
+
+
+def test_call_agent_for_narrative_redacts_sensitive_env_values(monkeypatch):
+    leaked_token = "secret-token-value"
+
+    def fake_run(cmd, **_kwargs):
+        return subprocess.CompletedProcess(cmd, 0, stdout=f"token: {leaked_token}", stderr="")
+
+    monkeypatch.setenv("PADDLEOCR_API_TOKEN", leaked_token)
+    monkeypatch.setattr("ipo_evidence.llm_caller.subprocess.run", fake_run)
+    monkeypatch.setattr("ipo_evidence.llm_caller._read_last_message", lambda _path: "")
+
+    output = call_agent_for_narrative("prompt", "system")
+
+    assert leaked_token not in output
+    assert output == "token: [REDACTED]"
+
+
+def test_call_llm_for_skill_reuses_agent_cli_wrapper(monkeypatch):
     captured = {}
 
     def fake_call_agent_for_narrative(**kwargs):
@@ -68,15 +112,13 @@ def test_call_claude_for_skill_reuses_agent_cli_wrapper(monkeypatch):
         fake_call_agent_for_narrative,
     )
 
-    output = call_claude_for_skill(
+    output = call_llm_for_skill(
         skill_name="business_goal_decompose",
         evidence_text="[C-001] 公司主要产品包括 AI 芯片。",
         instruction="只输出 JSON",
-        max_tokens=1000,
     )
 
     assert output == '{"business_goal":"把 AI 能力装进硬件"}'
     assert "business_goal_decompose" in captured["system_prompt"]
     assert "只输出 JSON" in captured["user_prompt"]
     assert "[C-001] 公司主要产品包括 AI 芯片。" in captured["user_prompt"]
-    assert captured["max_tokens"] == 1000
